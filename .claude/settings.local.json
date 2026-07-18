@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(npm -v)",
+      "Bash(npm ping *)",
+      "Bash(npx --yes create-expo-app@latest drivemate-frontend --template blank-typescript --no-install)",
+      "Bash(npx expo *)",
+      "Bash(npm install *)",
+      "Bash(npm view *)",
+      "Bash(node *)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('node_modules/@react-native-firebase/auth/package.json'\\)\\); print\\(json.dumps\\(d.get\\('exports', {}\\), indent=2\\)\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(npx expo-doctor *)",
+      "Bash(echo \"typecheck_exit=$?\")",
+      "Bash(echo \"EXIT=$?\")"
+    ]
+  }
+}

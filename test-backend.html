@@ -1,0 +1,3666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriveMate - Backend Tester Console & App Simulator</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Firebase Web SDK (v9 compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  
+  <style>
+    :root {
+      --bg-main: #0b111e;
+      --bg-card: #151f32;
+      --bg-input: #1e293b;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-yellow: #f59e0b;
+      --accent-cyan: #06b6d4;
+      
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'Fira Code', source-code-pro, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-main);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-input);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary);
+    }
+
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      z-index: 10;
+      position: relative;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .logo-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: white;
+    }
+
+    .logo-text h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, #ffffff, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-text p {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .server-status {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .status-badge.online {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .status-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    /* Container Grid */
+    .dashboard-container {
+      display: grid;
+      grid-template-columns: 350px 1fr 680px;
+      height: calc(100vh - 71px);
+      overflow: hidden;
+    }
+
+    @media (max-width: 1440px) {
+      .dashboard-container {
+        grid-template-columns: 320px 1fr 340px; /* Collapse side by side to single-phone toggle if screen size tiny */
+      }
+      .phone-simulator-container {
+        flex-direction: column !important;
+        align-items: center;
+        gap: 1.5rem;
+        overflow-y: auto !important;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-container {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+      }
+      .panel-left, .panel-center, .panel-right {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+    }
+
+    /* Left Panel: Configuration and Endpoints */
+    .panel-left {
+      border-right: 1px solid var(--border-color);
+      padding: 1.25rem;
+      overflow-y: auto;
+      height: 100%;
+      background-color: #0d131f;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Center Panel: Map & Status Indicator */
+    .panel-center {
+      padding: 1.25rem;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background-color: #080c14;
+      border-right: 1px solid var(--border-color);
+      overflow-y: auto;
+    }
+
+    /* Right Panel: Mobile Phone App Simulators */
+    .panel-right {
+      padding: 1.25rem;
+      height: 100%;
+      overflow-y: auto;
+      background-color: #0b101b;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Card Styling */
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-header-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #93c5fd;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding-bottom: 0.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 0.75rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-control {
+      width: 100%;
+      background-color: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      padding: 0.5rem 0.75rem;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-secondary {
+      background-color: var(--bg-input);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background-color: #2e3b52;
+    }
+
+    .btn-success {
+      background-color: var(--accent-green);
+    }
+
+    .btn-success:hover {
+      background-color: #059669;
+    }
+
+    .btn-danger {
+      background-color: var(--accent-red);
+    }
+
+    .btn-danger:hover {
+      background-color: #dc2626;
+    }
+
+    .badge-method {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      margin-right: 0.5rem;
+    }
+
+    .badge-get { background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-post { background-color: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.3); }
+    .badge-patch { background-color: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-delete { background-color: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    /* Auth summary details */
+    .auth-summary-mini {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .auth-item-mini {
+      background-color: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.4rem 0.5rem;
+    }
+
+    .auth-item-mini .lbl {
+      font-size: 0.6rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .auth-item-mini .val {
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Tabs Styling */
+    .tabs-nav {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+      gap: 0.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .tab-btn {
+      padding: 0.5rem 0.75rem;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 0.75rem;
+      cursor: pointer;
+      position: relative;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Accordion Style for Endpoints */
+    .endpoint-item {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      background-color: rgba(255, 255, 255, 0.01);
+      overflow: hidden;
+    }
+
+    .endpoint-header {
+      padding: 0.6rem 0.8rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+      transition: background-color 0.2s ease;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .endpoint-header:hover {
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .endpoint-desc-text {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      margin-left: auto;
+      margin-right: 0.75rem;
+    }
+
+    .endpoint-arrow {
+      transition: transform 0.2s ease;
+      fill: var(--text-secondary);
+      width: 16px;
+      height: 16px;
+    }
+
+    .endpoint-item.open .endpoint-arrow {
+      transform: rotate(180deg);
+    }
+
+    .endpoint-item.open .endpoint-body {
+      display: block;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .endpoint-body {
+      padding: 0.8rem;
+      display: none;
+      background-color: #0b0f19;
+    }
+
+    /* Stepper Styling */
+    .stepper {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 0.75rem;
+      position: relative;
+    }
+
+    .step-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 13px;
+      top: 28px;
+      bottom: -12px;
+      width: 2px;
+      background-color: var(--border-color);
+    }
+
+    .step-item.completed:not(:last-child)::after {
+      background-color: var(--accent-green);
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background-color: var(--bg-input);
+      border: 2px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      color: var(--text-secondary);
+      transition: all 0.3s ease;
+    }
+
+    .step-item.active .step-number {
+      border-color: var(--primary);
+      background-color: var(--bg-main);
+      color: var(--primary);
+      box-shadow: 0 0 8px var(--primary-glow);
+    }
+
+    .step-item.completed .step-number {
+      border-color: var(--accent-green);
+      background-color: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+    }
+
+    .step-content {
+      flex: 1;
+      padding-top: 0.2rem;
+    }
+
+    .step-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .step-desc {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+
+    .step-variables {
+      margin-top: 0.4rem;
+      padding: 0.4rem;
+      background: var(--bg-input);
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      border: 1px solid var(--border-color);
+      display: none;
+      color: var(--accent-cyan);
+    }
+
+    .step-variables.visible {
+      display: block;
+    }
+
+    /* Response Console */
+    .console-box {
+      flex: 1;
+      background-color: #05080f;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      overflow: auto;
+      max-height: 250px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      position: relative;
+    }
+
+    .console-btn-copy {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      opacity: 0.6;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 0.2rem 0.4rem;
+      font-size: 0.65rem;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+    }
+
+    .console-btn-copy:hover {
+      opacity: 1;
+    }
+
+    /* JSON Syntax Highlighting */
+    .json-key { color: #f87171; font-weight: 500; }
+    .json-string { color: #34d399; }
+    .json-number { color: #fbbf24; }
+    .json-boolean { color: #60a5fa; }
+    .json-null { color: #a78bfa; }
+
+    /* Map Overlay Dashboards */
+    .map-status-overlay {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .map-status-item {
+      text-align: center;
+    }
+
+    .map-status-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      letter-spacing: 0.05em;
+    }
+
+    .map-status-val {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #93c5fd;
+    }
+
+    .map-status-val.active {
+      color: var(--accent-green);
+    }
+
+    /* Mobile Phone Frames styling */
+    .phone-simulator-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .phone-frame {
+      width: 310px;
+      height: 540px;
+      background-color: #0b0f19;
+      border: 10px solid #1e293b;
+      border-radius: 36px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 0 2px 2px rgba(255,255,255,0.05);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    /* Phone Notch & Status Bar */
+    .phone-notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 110px;
+      height: 18px;
+      background-color: #1e293b;
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .phone-notch::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #111827;
+      margin-right: 20px;
+    }
+
+    .phone-notch::after {
+      content: '';
+      width: 25px;
+      height: 3px;
+      border-radius: 20px;
+      background: #334155;
+    }
+
+    .phone-status-bar {
+      height: 28px;
+      padding: 6px 16px 0 16px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      background-color: #0f172a;
+      z-index: 99;
+      user-select: none;
+    }
+
+    .phone-status-bar .right-icons {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .phone-screen {
+      flex: 1;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      position: relative;
+      background-color: #0a0e17;
+    }
+
+    /* Phone Screen Headers */
+    .phone-app-header {
+      font-size: 0.85rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #f1f5f9;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.4rem;
+    }
+
+    .phone-app-header span.badge {
+      font-size: 0.6rem;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    /* App Screen Specific UI components */
+    .phone-welcome-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 0.25rem;
+    }
+    
+    .phone-welcome-desc {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.25rem;
+    }
+
+    .phone-app-card {
+      background-color: #131b2e;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .phone-btn {
+      width: 100%;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+    }
+
+    .phone-btn:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    .phone-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .phone-btn-outline {
+      background: none;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-primary);
+    }
+
+    .phone-btn-outline:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .phone-btn-success {
+      background-color: var(--accent-green);
+    }
+    .phone-btn-success:hover {
+      background-color: #059669;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      background: #1e293b;
+      border-left: 4px solid var(--primary);
+      color: white;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.8rem;
+      transform: translateX(120%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      min-width: 280px;
+      max-width: 350px;
+    }
+
+    .toast.show {
+      transform: translateX(0);
+    }
+
+    .toast.success { border-left-color: var(--accent-green); }
+    .toast.error { border-left-color: var(--accent-red); }
+    .toast.warning { border-left-color: var(--accent-yellow); }
+    .toast.info { border-left-color: var(--accent-cyan); }
+
+    /* Map Path Animation Styles */
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -40;
+      }
+    }
+
+    .animate-path {
+      animation: dash 3s linear infinite;
+    }
+
+    /* Pulsing animations */
+    .pulsing-dot {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.9);
+        opacity: 0.5;
+      }
+      50% {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(0.9);
+        opacity: 0.5;
+      }
+    }
+
+    .radar-pulse {
+      position: relative;
+    }
+
+    .radar-pulse::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      animation: radar 1.5s infinite;
+      top: 0;
+      left: 0;
+      box-sizing: border-box;
+    }
+
+    @keyframes radar {
+      0% {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(2.2);
+        opacity: 0;
+      }
+    }
+
+    /* Driver List View */
+    .driver-selection-item {
+      background-color: #1e293b;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 0.6rem;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .driver-selection-item:hover {
+      border-color: var(--primary);
+      background-color: rgba(99, 102, 241, 0.05);
+    }
+
+    .driver-selection-item.selected {
+      border-color: var(--primary);
+      background-color: rgba(99, 102, 241, 0.1);
+      box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Screen togglers for testing */
+    .active-badge {
+      background-color: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      font-size: 0.6rem;
+      font-weight: 700;
+    }
+
+    .inactive-badge {
+      background-color: rgba(239, 68, 68, 0.1);
+      color: var(--accent-red);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      font-size: 0.6rem;
+      font-weight: 700;
+    }
+
+    /* Incoming sheet slide up */
+    .incoming-alert-sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: #1e293b;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
+      padding: 1rem;
+      z-index: 1000;
+      transform: translateY(105%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .incoming-alert-sheet.show {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>DriveMate</h1>
+        <p>Dynamic Interactive Sandbox & End-to-End Tester</p>
+      </div>
+    </div>
+
+    <!-- Live status checker -->
+    <div class="server-status">
+      <div id="healthBadge" class="status-badge" onclick="checkHealth()">
+        <span class="dot"></span>
+        <span id="healthText">CHECKING BACKEND...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Dashboard Container Grid -->
+  <div class="dashboard-container">
+    
+    <!-- LEFT PANEL: Controlled scenario Stepper and custom API consoles -->
+    <div class="panel-left">
+      
+      <!-- Base URL settings -->
+      <div class="card" style="padding: 0.75rem;">
+        <div class="card-header-title" style="margin-bottom: 0.5rem; padding-bottom: 0.25rem;">
+          <span>⚙️ Environments</span>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <input type="text" id="baseUrl" class="form-control" value="http://127.0.0.1:54321" placeholder="Backend Base URL">
+        </div>
+      </div>
+
+      <!-- Functional Tabs -->
+      <div class="tabs-nav">
+        <button id="tab-btn-stepper" class="tab-btn active" onclick="switchLeftTab('stepper')">🎬 Guided Steps</button>
+        <button id="tab-btn-manual" class="tab-btn" onclick="switchLeftTab('manual')">🔌 API Console</button>
+      </div>
+
+      <!-- Left Tab 1: Guided Steps Stepper -->
+      <div id="left-tab-stepper" class="tab-content active" style="flex: 1; overflow-y: auto;">
+        <div class="card">
+          <div class="card-header-title">
+            <span>Simulator Stepper</span>
+            <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.65rem;" onclick="resetScenario()">Reset Flow</button>
+          </div>
+          
+          <div class="stepper">
+            <!-- Step 1: Customer Auth -->
+            <div id="step-1" class="step-item active">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <div class="step-title">Login Customer</div>
+                <div class="step-desc">Login John Customer (+91 9999999999) to get backend JWT.</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep1()">Run Step 1</button>
+                </div>
+                <div id="step-1-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 2: Driver Auth -->
+            <div id="step-2" class="step-item">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <div class="step-title">Login Driver 1</div>
+                <div class="step-desc">Login Ravi Kumar (+91 9999999997) to get backend driver JWT.</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-2" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep2()">Run Step 2</button>
+                </div>
+                <div id="step-2-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 3: Online Toggle -->
+            <div id="step-3" class="step-item">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <div class="step-title">Make Driver Online</div>
+                <div class="step-desc">Set Driver status online (online=true, available=true, location active).</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-3" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep3()">Run Step 3</button>
+                </div>
+                <div id="step-3-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 4: Search Drivers -->
+            <div id="step-4" class="step-item">
+              <div class="step-number">4</div>
+              <div class="step-content">
+                <div class="step-title">Search Nearby Drivers</div>
+                <div class="step-desc">Query nearby online drivers from customer location.</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-4" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep4()">Run Step 4</button>
+                </div>
+                <div id="step-4-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 5: Booking -->
+            <div id="step-5" class="step-item">
+              <div class="step-number">5</div>
+              <div class="step-content">
+                <div class="step-title">Create Booking Request</div>
+                <div class="step-desc">Customer requests a booking assigning Driver 1 (creates COD payment).</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-5" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep5()">Run Step 5</button>
+                </div>
+                <div id="step-5-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 6: Accept -->
+            <div id="step-6" class="step-item">
+              <div class="step-number">6</div>
+              <div class="step-content">
+                <div class="step-title">Driver Accept Booking</div>
+                <div class="step-desc">Driver accepts booking. Transitions status to accepted.</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-6" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep6()">Run Step 6</button>
+                </div>
+                <div id="step-6-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 7: Arrive -->
+            <div id="step-7" class="step-item">
+              <div class="step-number">7</div>
+              <div class="step-content">
+                <div class="step-title">Driver Mark Arrived</div>
+                <div class="step-desc">Driver arrives at customer coordinates. Status becomes arrived.</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-7" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep7()">Run Step 7</button>
+                </div>
+                <div id="step-7-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 8: Start -->
+            <div id="step-8" class="step-item">
+              <div class="step-number">8</div>
+              <div class="step-content">
+                <div class="step-title">Start Trip</div>
+                <div class="step-desc">Customer boards car, driver starts trip. Status becomes started.</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-8" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep8()">Run Step 8</button>
+                </div>
+                <div id="step-8-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 9: Complete -->
+            <div id="step-9" class="step-item">
+              <div class="step-number">9</div>
+              <div class="step-content">
+                <div class="step-title">Complete Trip</div>
+                <div class="step-desc">Reach destination Kalyanpur. Trip status becomes completed.</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-9" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep9()">Run Step 9</button>
+                </div>
+                <div id="step-9-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 10: COD Cash -->
+            <div id="step-10" class="step-item">
+              <div class="step-number">10</div>
+              <div class="step-content">
+                <div class="step-title">Mark COD Cash Collected</div>
+                <div class="step-desc">Driver collects cash and marks payment as completed.</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-10" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep10()">Run Step 10</button>
+                </div>
+                <div id="step-10-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 11: Rate -->
+            <div id="step-11" class="step-item">
+              <div class="step-number">11</div>
+              <div class="step-content">
+                <div class="step-title">Rate Trip (Customer)</div>
+                <div class="step-desc">Customer submits review and rating (5 stars).</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-11" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep11()">Run Step 11</button>
+                </div>
+                <div id="step-11-vars" class="step-variables"></div>
+              </div>
+            </div>
+
+            <!-- Step 12: Check Earnings -->
+            <div id="step-12" class="step-item">
+              <div class="step-number">12</div>
+              <div class="step-content">
+                <div class="step-title">Check Earnings & Reviews</div>
+                <div class="step-desc">Driver queries earnings and review log to verify update.</div>
+                <div class="step-actions">
+                  <button class="btn btn-secondary" id="btn-step-12" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="runStep12()">Run Step 12</button>
+                </div>
+                <div id="step-12-vars" class="step-variables"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Left Tab 2: Manual API Console (Accordion endpoints list) -->
+      <div id="left-tab-manual" class="tab-content" style="flex: 1; overflow-y: auto;">
+        
+        <!-- Auth Endpoints Accordions -->
+        <div class="endpoint-item" id="ep-health">
+          <div class="endpoint-header" onclick="toggleAccordion('ep-health')">
+            <span>GET /health</span>
+            <span class="endpoint-desc-text">Verify Server</span>
+            <svg class="endpoint-arrow" viewBox="0 0 20 20"><path d="M5.5 8.5l4.5 4.5 4.5-4.5z"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <button class="btn phone-btn" onclick="executeApiRequest('GET', '/functions/v1/health')">Execute GET /health</button>
+          </div>
+        </div>
+
+        <div class="endpoint-item" id="ep-session">
+          <div class="endpoint-header" onclick="toggleAccordion('ep-session')">
+            <span>POST /auth-session</span>
+            <span class="endpoint-desc-text">JWT Login</span>
+            <svg class="endpoint-arrow" viewBox="0 0 20 20"><path d="M5.5 8.5l4.5 4.5 4.5-4.5z"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <div class="form-group">
+              <label>Firebase Token</label>
+              <input type="text" id="man-session-token" class="form-control" value="mock-token-9999999999">
+            </div>
+            <div class="form-group">
+              <label>Role</label>
+              <select id="man-session-role" class="form-control">
+                <option value="customer">customer</option>
+                <option value="driver">driver</option>
+              </select>
+            </div>
+            <button class="btn phone-btn" onclick="runManualSession()">Execute POST /auth-session</button>
+          </div>
+        </div>
+
+        <div class="endpoint-item" id="ep-drivers-nearby-console">
+          <div class="endpoint-header" onclick="toggleAccordion('ep-drivers-nearby-console')">
+            <span>GET /drivers-nearby</span>
+            <span class="endpoint-desc-text">Find Drivers</span>
+            <svg class="endpoint-arrow" viewBox="0 0 20 20"><path d="M5.5 8.5l4.5 4.5 4.5-4.5z"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <div class="form-group">
+              <label>Lat / Lng</label>
+              <div style="display: flex; gap: 0.25rem;">
+                <input type="number" id="man-nearby-lat" class="form-control" value="26.45" step="0.001">
+                <input type="number" id="man-nearby-lng" class="form-control" value="80.33" step="0.001">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Radius (KM)</label>
+              <input type="number" id="man-nearby-radius" class="form-control" value="10">
+            </div>
+            <button class="btn phone-btn" onclick="runManualNearby()">Execute GET /drivers-nearby</button>
+          </div>
+        </div>
+
+        <div class="endpoint-item" id="ep-drivers-loc">
+          <div class="endpoint-header" onclick="toggleAccordion('ep-drivers-loc')">
+            <span>POST /drivers-location</span>
+            <span class="endpoint-desc-text">Update GPS</span>
+            <svg class="endpoint-arrow" viewBox="0 0 20 20"><path d="M5.5 8.5l4.5 4.5 4.5-4.5z"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <div class="form-group">
+              <label>Lat / Lng</label>
+              <div style="display: flex; gap: 0.25rem;">
+                <input type="number" id="man-loc-lat" class="form-control" value="26.4499" step="0.0001">
+                <input type="number" id="man-loc-lng" class="form-control" value="80.3319" step="0.0001">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select id="man-loc-online" class="form-control">
+                <option value="true">Online</option>
+                <option value="false">Offline</option>
+              </select>
+            </div>
+            <button class="btn phone-btn" onclick="runManualLocation()">Execute POST /drivers-location</button>
+          </div>
+        </div>
+
+        <div class="endpoint-item" id="ep-bookings-create-console">
+          <div class="endpoint-header" onclick="toggleAccordion('ep-bookings-create-console')">
+            <span>POST /bookings-create</span>
+            <span class="endpoint-desc-text">Request Ride</span>
+            <svg class="endpoint-arrow" viewBox="0 0 20 20"><path d="M5.5 8.5l4.5 4.5 4.5-4.5z"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <div class="form-group">
+              <label>Driver Profile ID</label>
+              <input type="text" id="man-book-driver" class="form-control" value="driver-profile-id">
+            </div>
+            <div class="form-group">
+              <label>Plate / Model</label>
+              <div style="display: flex; gap: 0.25rem;">
+                <input type="text" id="man-book-vno" class="form-control" value="UP78EX1234" placeholder="Plate">
+                <input type="text" id="man-book-vmod" class="form-control" value="Maruti Swift" placeholder="Model">
+              </div>
+            </div>
+            <button class="btn phone-btn" onclick="runManualBookingCreate()">Execute POST /bookings-create</button>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+
+    <!-- CENTER PANEL: Animated Visual Kanpur Map and Console Logger -->
+    <div class="panel-center">
+      
+      <!-- Map Widget -->
+      <div class="card" style="flex: 1; display: flex; flex-direction: column; min-height: 380px;">
+        <div class="card-header-title" style="margin-bottom: 0.5rem; padding-bottom: 0.25rem;">
+          <span>🗺️ Live Simulator Map (Kanpur, India)</span>
+        </div>
+        
+        <div style="flex: 1; position: relative;">
+          <!-- SVG map layout -->
+          <svg id="kanpurMap" viewBox="0 0 500 500" style="width: 100%; height: 100%; min-height: 350px; background-color: #0d1527; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+            <!-- Ganges River -->
+            <path d="M -10,60 C 130,80 250,110 380,50 C 440,25 470,10 520,5" fill="none" stroke="#1d4ed8" stroke-width="26" opacity="0.25" />
+            <path d="M -10,60 C 130,80 250,110 380,50 C 440,25 470,10 520,5" fill="none" stroke="#2563eb" stroke-width="12" opacity="0.4" />
+            
+            <!-- Road Network Grid -->
+            <!-- Horizontal main streets -->
+            <line x1="20" y1="420" x2="480" y2="420" stroke="#1e293b" stroke-width="12" stroke-linecap="round" />
+            <line x1="20" y1="350" x2="480" y2="350" stroke="#1e293b" stroke-width="12" stroke-linecap="round" />
+            <line x1="20" y1="200" x2="480" y2="200" stroke="#1e293b" stroke-width="12" stroke-linecap="round" />
+            
+            <!-- Vertical main streets -->
+            <line x1="150" y1="50" x2="150" y2="450" stroke="#1e293b" stroke-width="12" stroke-linecap="round" />
+            <line x1="380" y1="50" x2="380" y2="450" stroke="#1e293b" stroke-width="12" stroke-linecap="round" />
+            
+            <!-- Diagonals / Highways -->
+            <line x1="150" y1="350" x2="380" y2="200" stroke="#334155" stroke-width="8" stroke-linecap="round" />
+            
+            <!-- Road lane dashes -->
+            <line x1="20" y1="350" x2="480" y2="350" stroke="#eab308" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6" />
+            <line x1="150" y1="50" x2="150" y2="450" stroke="#ffffff" stroke-width="1" stroke-dasharray="8,6" opacity="0.4" />
+            <line x1="380" y1="50" x2="380" y2="450" stroke="#ffffff" stroke-width="1" stroke-dasharray="8,6" opacity="0.4" />
+
+            <!-- Green areas / parks -->
+            <rect x="250" y="240" width="80" height="70" rx="8" fill="#064e3b" opacity="0.35" />
+            <text x="290" y="280" fill="#10b981" font-size="8" text-anchor="middle" font-weight="bold" opacity="0.8">Phool Bagh</text>
+
+            <rect x="40" y="80" width="90" height="80" rx="8" fill="#064e3b" opacity="0.25" />
+            <text x="85" y="125" fill="#10b981" font-size="8" text-anchor="middle" font-weight="bold" opacity="0.8">Zoo Forest</text>
+
+            <!-- Route Path Line -->
+            <path id="svgRouteLine" d="" fill="none" stroke="#6366f1" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8,6" opacity="0" class="animate-path" style="transition: opacity 0.5s;" />
+
+            <!-- Pickup coordinates: 26.45, 80.33 -> SVG x:150, y:350 -->
+            <g id="svgPickupMarker" transform="translate(150,350)" style="display:none;">
+              <circle r="14" fill="rgba(99, 102, 241, 0.3)" class="pulsing-dot" />
+              <circle r="6" fill="#6366f1" stroke="#ffffff" stroke-width="2" />
+              <text y="-18" fill="#ffffff" font-size="10" font-weight="bold" text-anchor="middle" style="text-shadow: 0 1px 4px #000;">Pickup (Station)</text>
+            </g>
+
+            <!-- Dropoff coordinates: 26.46, 80.34 -> SVG x:380, y:200 -->
+            <g id="svgDropoffMarker" transform="translate(380,200)" style="display:none;">
+              <circle r="14" fill="rgba(239, 68, 68, 0.3)" />
+              <circle r="6" fill="#ef4444" stroke="#ffffff" stroke-width="2" />
+              <text y="-18" fill="#ffffff" font-size="10" font-weight="bold" text-anchor="middle" style="text-shadow: 0 1px 4px #000;">Dropoff (Kalyanpur)</text>
+            </g>
+
+            <!-- Driver Car Markers -->
+            <!-- Driver 1 (Ravi): starting at (194, 352) -> maps to 26.4499, 80.3319 -->
+            <g id="svgDriver1Car" transform="translate(194,352)" style="transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);">
+              <circle r="16" fill="rgba(16, 185, 129, 0.2)" />
+              <circle r="7" fill="#10b981" stroke="#ffffff" stroke-width="1.5" />
+              <!-- Small arrow indicator pointing forward -->
+              <polygon points="0,-3 4,4 -4,4" fill="#ffffff" transform="rotate(90)" />
+              <text y="24" fill="#10b981" font-size="9" font-weight="bold" text-anchor="middle" style="text-shadow: 0 1px 2px #000;">Ravi (Driver 1)</text>
+            </g>
+
+            <!-- Driver 2 (Suresh): starting at (380, 200) -> maps to 26.46, 80.34 -->
+            <g id="svgDriver2Car" transform="translate(380,200)" style="transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);">
+              <circle r="16" fill="rgba(245, 158, 11, 0.2)" />
+              <circle r="7" fill="#f59e0b" stroke="#ffffff" stroke-width="1.5" />
+              <polygon points="0,-3 4,4 -4,4" fill="#ffffff" transform="rotate(90)" />
+              <text y="24" fill="#f59e0b" font-size="9" font-weight="bold" text-anchor="middle" style="text-shadow: 0 1px 2px #000;">Suresh (Driver 2)</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Map Overlay HUD -->
+      <div class="map-status-overlay">
+        <div class="map-status-item">
+          <div class="map-status-label">Active Booking</div>
+          <div id="hudBookingNo" class="map-status-val">---</div>
+        </div>
+        <div class="map-status-item">
+          <div class="map-status-label">Status</div>
+          <div id="hudBookingStatus" class="map-status-val" style="color: var(--accent-cyan);">NO ACTIVE TRIP</div>
+        </div>
+        <div class="map-status-item">
+          <div class="map-status-label">Fare / Est</div>
+          <div id="hudBookingFare" class="map-status-val">₹ 0.00</div>
+        </div>
+      </div>
+
+      <!-- Response Logger Console -->
+      <div class="card" style="display: flex; flex-direction: column; gap: 0.5rem; height: 260px;">
+        <div class="console-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.25rem;">
+          <div style="font-size: 0.75rem; font-weight: 700; color: #93c5fd; display: flex; align-items: center; gap: 0.25rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+            <span>Response Console Logs</span>
+          </div>
+          <div style="display: flex; gap: 0.4rem;">
+            <span id="resStatus" class="meta-badge" style="font-size: 0.65rem;">---</span>
+            <span id="resTime" class="meta-badge" style="font-size: 0.65rem;">-- ms</span>
+          </div>
+        </div>
+        <div style="font-size: 0.65rem; color: var(--text-secondary); display: flex; justify-content: space-between; overflow: hidden;">
+          <div><b>Request:</b> <span id="reqMethodPath" style="font-family: var(--font-mono); color: var(--accent-cyan);">None</span></div>
+        </div>
+        <div class="console-box">
+          <button class="console-btn-copy" onclick="copyConsole()">Copy</button>
+          <code id="consoleContent">// API responses will print here. Click quick presets or stepper steps to initialize.</code>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL: SIDE-BY-SIDE MOBILE APP SIMULATORS -->
+    <div class="panel-right">
+      
+      <div class="phone-simulator-container">
+        
+        <!-- PHONE 1: CUSTOMER APP -->
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-status-bar">
+            <span id="custPhoneTime">16:12</span>
+            <div class="right-icons">📶 🔋 100%</div>
+          </div>
+          <div class="phone-screen" id="custPhoneScreen">
+            <!-- Screen Content updates dynamically from JS -->
+          </div>
+        </div>
+
+        <!-- PHONE 2: DRIVER APP -->
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-status-bar">
+            <span id="drivPhoneTime">16:12</span>
+            <div class="right-icons">📶 🔋 98%</div>
+          </div>
+          <div class="phone-screen" id="drivPhoneScreen">
+            <!-- Screen Content updates dynamically from JS -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // Initialize Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCZoVbmKki7bO3QPgGdxaUJyQJvxuA2IYk",
+      authDomain: "drivemate-8c07f.firebaseapp.com",
+      projectId: "drivemate-8c07f",
+      storageBucket: "drivemate-8c07f.appspot.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    
+    // Initialize RecaptchaVerifier
+    window.addEventListener('DOMContentLoaded', () => {
+      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response) => {
+          // reCAPTCHA solved
+        }
+      });
+    });
+
+    // Global Application State
+    let state = {
+      baseUrl: 'http://127.0.0.1:54321',
+      
+      // Customer Auth details
+      customerToken: '',
+      customerId: '',
+      customerName: 'John Customer',
+      customerPhone: '9999999999',
+      customerOtp: '',
+      customerAadhar: '',
+      customerCarNumber: '',
+      customerRcNumber: '',
+      
+      // Driver Auth details
+      driverToken: '',
+      driverUserId: '',
+      driverProfileId: '',
+      driverName: 'Ravi Kumar',
+      driverPhone: '9999999997',
+      driverAadhar: '',
+      driverDlNumber: '',
+      
+      // Current active simulation details
+      activeBookingId: '',
+      activeBooking: null,
+      activeBookingStatus: 'none',
+      tempFirebaseUid: '',
+      
+      // Scenarios Tracker
+      currentStep: 1,
+      nearbyDrivers: [],
+      selectedDriverId: '',
+      
+      // Map configurations
+      pickupLat: 26.4500,
+      pickupLng: 80.3300,
+      dropLat: 26.4600,
+      dropLng: 80.3400,
+      
+      // Driver active coords (start near station)
+      driverLat: 26.4499,
+      driverLng: 80.3319,
+      driverOnline: false,
+      driverAvailable: false,
+      
+      // Ratings variables
+      lastRating: 5,
+      lastComment: 'Excellent drive, extremely punctual and polite!'
+    };
+
+    // Coordinate conversion formulas: real Kanpur GPS -> SVG (500x500 px) viewport
+    function latLngToSvg(lat, lng) {
+      const y = -20000 * lat + 529350;
+      const x = 23000 * lng - 1847440;
+      return { x, y };
+    }
+
+    // Initialize application UI
+    window.addEventListener('DOMContentLoaded', () => {
+      // Set initial clock times
+      updateClocks();
+      setInterval(updateClocks, 30000);
+
+      // Load environment variables if saved
+      const savedBaseUrl = localStorage.getItem('dm_sandbox_base_url');
+      if (savedBaseUrl) {
+        document.getElementById('baseUrl').value = savedBaseUrl;
+        state.baseUrl = savedBaseUrl;
+      }
+      
+      // Load configurations
+      document.getElementById('baseUrl').addEventListener('input', (e) => {
+        state.baseUrl = e.target.value;
+        localStorage.setItem('dm_sandbox_base_url', state.baseUrl);
+      });
+
+      // Synchronize with database
+      checkHealth();
+      setInterval(checkHealth, 5000);
+
+      // Restore session or render defaults
+      renderCustomerScreen('login');
+      renderDriverScreen('login');
+      
+      // Start active booking loop poller
+      setInterval(syncBookingState, 2000);
+    });
+
+    // Clock formatter
+    function updateClocks() {
+      const d = new Date();
+      const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const cTime = document.getElementById('custPhoneTime');
+      const dTime = document.getElementById('drivPhoneTime');
+      if (cTime) cTime.textContent = timeStr;
+      if (dTime) dTime.textContent = timeStr;
+    }
+
+    // Health checker
+    async function checkHealth() {
+      const badge = document.getElementById('healthBadge');
+      const text = document.getElementById('healthText');
+      const baseUrlVal = document.getElementById('baseUrl').value.trim();
+      
+      try {
+        const response = await fetch(`${baseUrlVal}/functions/v1/health`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+          badge.className = 'status-badge online';
+          text.textContent = 'ONLINE';
+        } else {
+          badge.className = 'status-badge';
+          text.textContent = `STATUS: ${response.status}`;
+        }
+      } catch (error) {
+        badge.className = 'status-badge';
+        text.textContent = 'OFFLINE';
+      }
+    }
+
+    // Toggle manual tab buttons
+    function switchLeftTab(tabId) {
+      document.getElementById('tab-btn-stepper').classList.remove('active');
+      document.getElementById('tab-btn-manual').classList.remove('active');
+      document.getElementById('left-tab-stepper').classList.remove('active');
+      document.getElementById('left-tab-manual').classList.remove('active');
+
+      document.getElementById(`tab-btn-${tabId}`).classList.add('active');
+      document.getElementById(`left-tab-${tabId}`).classList.add('active');
+    }
+
+    // Toggle accordion lists
+    function toggleAccordion(id) {
+      const el = document.getElementById(id);
+      const wasOpen = el.classList.contains('open');
+      document.querySelectorAll('.endpoint-item').forEach(item => {
+        item.classList.remove('open');
+      });
+      if (!wasOpen) el.classList.add('open');
+    }
+
+    // Display toast notification
+    function showToast(message, type = "success") {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      let icon = 'ℹ️';
+      if (type === 'success') icon = '✅';
+      if (type === 'error') icon = '❌';
+      if (type === 'warning') icon = '⚠️';
+      if (type === 'info') icon = '🚀';
+      
+      toast.innerHTML = `
+        <span style="font-size: 1rem">${icon}</span>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 10);
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // API Executor core
+    async function executeApiRequest(method, path, body = null, tokenOverride = null) {
+      const headers = { 'Accept': 'application/json' };
+      
+      // Determine token
+      let token = tokenOverride;
+      if (!token) {
+        // Fallback depending on endpoint URL context
+        if (path.includes('driver') || path.includes('payments-mark') || path.includes('earnings')) {
+          token = state.driverToken;
+        } else {
+          token = state.customerToken;
+        }
+      }
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      if (body) {
+        headers['Content-Type'] = 'application/json';
+      }
+
+      const url = `${state.baseUrl}${path}`;
+      const startTime = performance.now();
+
+      try {
+        const response = await fetch(url, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : null
+        });
+        const duration = Math.round(performance.now() - startTime);
+        
+        let responseData;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          responseData = await response.json();
+        } else {
+          responseData = { rawText: await response.text() };
+        }
+
+        updateConsoleHUD(method, path, headers, response.status, duration, responseData);
+        return { status: response.status, data: responseData };
+      } catch (err) {
+        const duration = Math.round(performance.now() - startTime);
+        updateConsoleHUD(method, path, headers, 0, duration, { error: err.message });
+        return { status: 0, error: err };
+      }
+    }
+
+    // Update the console pane at the bottom
+    function updateConsoleHUD(method, path, headers, status, duration, response) {
+      document.getElementById('reqMethodPath').textContent = `${method} ${path}`;
+      const cleanHeaders = { ...headers };
+      if (cleanHeaders['Authorization']) {
+        cleanHeaders['Authorization'] = 'Bearer [TOKEN_HIDDEN]';
+      }
+      
+      const statusBadge = document.getElementById('resStatus');
+      statusBadge.textContent = status === 0 ? "ERROR" : `STATUS: ${status}`;
+      statusBadge.className = 'meta-badge';
+      if (status >= 200 && status < 300) statusBadge.classList.add('success');
+      else statusBadge.classList.add('error');
+      
+      document.getElementById('resTime').textContent = `${duration} ms`;
+      document.getElementById('consoleContent').innerHTML = syntaxHighlight(JSON.stringify(response, null, 2));
+    }
+
+    // Pretty syntax highlighting for JSON response strings
+    function syntaxHighlight(json) {
+      json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
+        let cls = 'number';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'key';
+          } else {
+            cls = 'string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'boolean';
+        } else if (/null/.test(match)) {
+          cls = 'null';
+        }
+        return `<span class="json-${cls}">${match}</span>`;
+      });
+    }
+
+    function copyConsole() {
+      const code = document.getElementById('consoleContent').innerText;
+      navigator.clipboard.writeText(code);
+      showToast("Copied console logs to clipboard!", "success");
+    }
+
+
+    /* ========================================================
+       MOBILE APP SCREENS CONTROLLERS & RENDERING
+       ======================================================== */
+
+    function renderCustomerScreen(screenType, data = null) {
+      const screen = document.getElementById('custPhoneScreen');
+      if (!screen) return;
+      
+      if (screenType === 'login') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>DriveMate Client</span>
+            <span class="active-badge">Guest</span>
+          </div>
+          <div style="margin-top: 1rem;">
+            <div class="phone-welcome-title">Book a Driver</div>
+            <div class="phone-welcome-desc">Secure rides by verified local drivers.</div>
+            
+            <div class="phone-app-card">
+              <div class="form-group">
+                <label>Phone Number</label>
+                <input type="text" id="cust-phone-input" class="form-control" value="9999999999" placeholder="Enter Phone">
+              </div>
+              <button class="phone-btn" onclick="custSendOtp()">Send OTP</button>
+            </div>
+            
+            <div style="font-size: 0.65rem; color: var(--text-secondary); text-align: center; margin-top: 2rem;">
+              Auto-login bypass via Deno mock server enabled.
+            </div>
+          </div>
+        `;
+      } 
+      else if (screenType === 'otp') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>DriveMate Client</span>
+            <span class="active-badge">Guest</span>
+          </div>
+          <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+            <div class="phone-welcome-title">Verify Number</div>
+            <div class="phone-welcome-desc">Enter the 6-digit code sent to +91 ${state.customerPhone}</div>
+            
+            <div class="phone-app-card">
+              <div class="form-group">
+                <label>Verification Code</label>
+                <input type="text" id="cust-otp-input" class="form-control" value="123456" placeholder="1 2 3 4 5 6">
+              </div>
+            </div>
+            
+            <button class="phone-btn phone-btn-success" style="margin-top: auto;" onclick="custVerifyOtp()">Verify Code</button>
+          </div>
+        `;
+      }
+      else if (screenType === 'onboard') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>Onboarding Setup</span>
+            <span class="active-badge" style="background-color: var(--accent-yellow); color: white;">NEW USER</span>
+          </div>
+          <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+            <div style="font-size: 0.8rem; font-weight: 800; color: #fff; text-align: center; margin-bottom: 0.25rem;">Complete Onboarding</div>
+            <div style="font-size: 0.65rem; color: var(--text-secondary); text-align: center; margin-bottom: 0.5rem;">Select your profile role and verify details.</div>
+            
+            <div class="phone-app-card" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 14rem; overflow-y: auto;">
+              <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="cust-onboard-name" class="form-control" placeholder="Enter Full Name" value="John Customer">
+              </div>
+              <div class="form-group">
+                <label>Account Role</label>
+                <select id="cust-onboard-role" class="form-control" onchange="onOnboardRoleChange('customer', this.value)">
+                  <option value="customer">Customer (Book a Ride)</option>
+                  <option value="driver">Driver (Earn money)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Aadhar Card Number</label>
+                <input type="text" id="cust-onboard-aadhar" class="form-control" value="${generateRandomAadhar()}">
+              </div>
+              <div id="cust-onboard-customer-fields">
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                  <label>Car Number</label>
+                  <input type="text" id="cust-onboard-car-no" class="form-control" value="${generateRandomCarNumber()}">
+                </div>
+                <div class="form-group">
+                  <label>RC Book Number</label>
+                  <input type="text" id="cust-onboard-rc-no" class="form-control" value="${generateRandomRc()}">
+                </div>
+              </div>
+              <div id="cust-onboard-driver-fields" style="display: none;">
+                <div class="form-group">
+                  <label>Driving License (DL) Number</label>
+                  <input type="text" id="cust-onboard-dl-no" class="form-control" value="${generateRandomDl()}">
+                </div>
+              </div>
+            </div>
+            
+            <button class="phone-btn phone-btn-success" style="margin-top: auto;" onclick="submitOnboarding('customer')">Create Account</button>
+          </div>
+        `;
+      }
+      else if (screenType === 'home') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>📍 Kanpur Home</span>
+            <span class="active-badge">${state.customerName}</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.6rem; flex: 1;">
+            
+            <!-- Verified customer credentials -->
+            <div class="phone-app-card" style="font-size: 0.65rem; color: var(--text-secondary); padding: 0.5rem; margin-bottom: 0.1rem;">
+              <div style="font-weight: 700; color: white; margin-bottom: 0.2rem;">Verified Client Credentials:</div>
+              <div>Aadhar: <b style="color: white;">${state.customerAadhar || 'N/A'}</b></div>
+              <div>Car Number: <b style="color: white;">${state.customerCarNumber || 'N/A'}</b></div>
+              <div>RC Book: <b style="color: white;">${state.customerRcNumber || 'N/A'}</b></div>
+            </div>
+            
+            <div class="phone-app-card" style="margin-bottom: 0.25rem;">
+              <div class="form-group" style="margin-bottom: 0.4rem;">
+                <label>Pickup Location</label>
+                <div style="font-size: 0.75rem; font-weight: 700; color: #fff;">Kanpur Central Station</div>
+                <div style="font-size: 0.65rem; color: var(--text-secondary);">Lat: ${state.pickupLat.toFixed(4)}, Lng: ${state.pickupLng.toFixed(4)}</div>
+              </div>
+              <div class="form-group" id="cust-dropoff-group" style="margin-bottom: 0; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.4rem;">
+                <label>Dropoff Location</label>
+                <div style="font-size: 0.75rem; font-weight: 700; color: #fff;">Kalyanpur Neighborhood</div>
+                <div style="font-size: 0.65rem; color: var(--text-secondary);">Lat: ${state.dropLat.toFixed(4)}, Lng: ${state.dropLng.toFixed(4)}</div>
+              </div>
+            </div>
+
+            <div class="phone-app-card" style="margin-bottom: 0.25rem; padding: 0.6rem;">
+              <div style="display: flex; justify-content: space-between; gap: 0.4rem; margin-bottom: 0.4rem;">
+                <div style="flex: 1;">
+                  <label style="font-size: 0.6rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700;">Ride Mode</label>
+                  <select id="cust-ride-mode" class="form-control" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onchange="toggleRideMode(this.value)">
+                    <option value="point_to_point">Point to Point</option>
+                    <option value="hourly">Hourly (No Destination)</option>
+                  </select>
+                </div>
+                <div style="flex: 1;">
+                  <label style="font-size: 0.6rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700;">Service Type</label>
+                  <select id="cust-ride-service" class="form-control" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                    <option value="local">Local Trip</option>
+                    <option value="airport">Airport Drop</option>
+                    <option value="outstation">Outstation</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.4rem;">
+                <div style="flex: 1;">
+                  <label style="font-size: 0.6rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700;">Vehicle No</label>
+                  <input type="text" id="cust-ride-vno" class="form-control" value="UP78EX1234" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; text-transform: uppercase;">
+                </div>
+              </div>
+            </div>
+
+            <button class="phone-btn" onclick="custSearchDrivers()">🔍 Search Nearby Drivers</button>
+
+            <div id="cust-nearby-drivers-list" style="margin-top: 0.4rem; overflow-y: auto; max-height: 160px; flex: 1;">
+              <!-- Driver lists render here -->
+              <div style="font-size: 0.7rem; color: var(--text-secondary); text-align: center; padding-top: 1rem;">
+                Click "Search Nearby Drivers" to query mock database.
+              </div>
+            </div>
+
+            <button id="cust-request-btn" class="phone-btn phone-btn-success" disabled onclick="custCreateBookingRequest()">🚀 Request Ride Booking</button>
+          </div>
+        `;
+      } 
+      else if (screenType === 'matching') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>Finding Driver...</span>
+            <span class="active-badge">Pending</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; text-align: center;">
+            <div class="radar-pulse" style="width: 80px; height: 80px; background-color: rgba(99,102,241,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 2rem;">
+              🔑
+            </div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem;">Requesting Ride...</div>
+            <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 1.5rem; padding: 0 1rem;">
+              Booking #${state.activeBooking?.bookingNumber ?? 'n/a'} has been sent to driver. Awaiting acceptance on the driver's phone.
+            </div>
+            
+            <div class="phone-app-card" style="width: 100%;">
+              <div style="font-size: 0.65rem; color: var(--text-secondary); text-align: left;">Assigned Driver ID:</div>
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-cyan); text-align: left;">${state.selectedDriverId || 'Ravi Kumar'}</div>
+            </div>
+
+            <button class="phone-btn phone-btn-outline" style="margin-top: 1.5rem;" onclick="cancelActiveBooking()">Cancel Request</button>
+          </div>
+        `;
+      } 
+      else if (screenType === 'ride_active') {
+        const status = state.activeBookingStatus;
+        let title = "Driver Accepted";
+        let desc = "Ravi Kumar is heading to your pickup location.";
+        let otpCardHtml = '';
+        
+        if (status === 'arrived') {
+          title = "Driver Arrived";
+          desc = "Driver is waiting at Kanpur Central Station.";
+        } else if (status === 'started') {
+          title = "Trip In Progress";
+          desc = "Heading towards Kalyanpur. Safe travels!";
+        }
+        
+        if (['driver_accepted', 'driver_arriving', 'arrived'].includes(status) && state.customerOtp) {
+          otpCardHtml = `
+            <div class="phone-app-card" style="border-left: 4px solid var(--accent-cyan); display: flex; justify-content: space-between; align-items: center; padding: 0.6rem;">
+              <div>
+                <div style="font-size: 0.75rem; font-weight: 800; color: #fff;">Share OTP to Start Trip</div>
+                <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.15rem;">Share with driver to start ride.</div>
+              </div>
+              <div style="background-color: var(--accent-cyan); color: #0b111e; font-size: 1rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 6px; letter-spacing: 1px;">
+                ${state.customerOtp}
+              </div>
+            </div>
+          `;
+        }
+
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>On Trip Status</span>
+            <span class="active-badge" style="background-color: rgba(6,182,212,0.15); color: var(--accent-cyan);">${status.toUpperCase()}</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+            
+            <div class="phone-app-card" style="text-align: center; border-color: var(--primary);">
+              <div style="font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: 0.25rem;">${title}</div>
+              <div style="font-size: 0.7rem; color: var(--text-secondary);">${desc}</div>
+            </div>
+
+            ${otpCardHtml}
+
+            <div class="phone-app-card">
+              <div style="font-size: 0.65rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.5rem;">Assigned Driver Info</div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <div style="width: 32px; height: 32px; background: #6366f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem;">👨‍✈️</div>
+                <div>
+                  <div style="font-size: 0.75rem; font-weight: 700; color: #fff;">${state.driverName}</div>
+                  <div style="font-size: 0.65rem; color: var(--accent-yellow);">⭐⭐⭐⭐⭐ (4.9 Rating)</div>
+                </div>
+              </div>
+              <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem; display: flex; justify-content: space-between; font-size: 0.7rem;">
+                <div>Vehicle: <b>Maruti Swift</b></div>
+                <div>Plate: <b>UP78EX1234</b></div>
+              </div>
+            </div>
+
+            <div class="phone-app-card" style="margin-top: auto;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; font-size: 0.75rem;">
+                <span>Fare Total:</span>
+                <span style="font-weight: 700; color: var(--accent-green);">₹ ${Number(state.activeBooking?.totalAmount ?? 400).toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem;">
+                <span>Payment Method:</span>
+                <span style="font-weight: 700; text-transform: uppercase;">Cash COD</span>
+              </div>
+            </div>
+
+            ${status !== 'started' ? `<button class="phone-btn phone-btn-outline" onclick="cancelActiveBooking()">Cancel Ride</button>` : ''}
+          </div>
+        `;
+      } 
+      else if (screenType === 'payment') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>Cash Collection</span>
+            <span class="active-badge" style="background-color: rgba(245,158,11,0.1); color: var(--accent-yellow);">COD DUE</span>
+          </div>
+          <div style="display: flex; flex-direction: column; justify-content: center; flex: 1;">
+            
+            <div style="text-align: center; margin-bottom: 2rem;">
+              <div style="font-size: 2.2rem;">💵</div>
+              <div style="font-size: 1.25rem; font-weight: 800; color: #fff; margin-top: 0.5rem;">Pay Cash to Driver</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Your trip reached destination Kalyanpur.</div>
+            </div>
+
+            <div class="phone-app-card" style="margin-bottom: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem; font-size: 0.75rem;">
+                <span>Fare Charges</span>
+                <span>₹ ${Number(state.activeBooking?.totalAmount ?? 400).toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 0.4rem; font-weight: 700;">
+                <span>Amount to Pay</span>
+                <span style="color: var(--accent-green);">₹ ${Number(state.activeBooking?.totalAmount ?? 400).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div style="background-color: rgba(245,158,11,0.05); border: 1px dashed var(--accent-yellow); border-radius: 8px; padding: 0.6rem; font-size: 0.7rem; color: var(--accent-yellow); text-align: center; margin-bottom: 2rem;">
+              Awaiting driver confirmation of cash collection.
+            </div>
+
+            <button class="phone-btn phone-btn-outline" onclick="checkPaidStatus()">🔄 Refresh Status</button>
+          </div>
+        `;
+      } 
+      else if (screenType === 'review') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>Rate Driver</span>
+            <span class="active-badge">Feedback</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+            
+            <div style="text-align: center; margin: 1rem 0;">
+              <div style="font-size: 1.1rem; font-weight: 800; color: #fff;">How was your ride?</div>
+              <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">Rate Ravi Kumar for trip.</div>
+            </div>
+
+            <div class="phone-app-card" style="text-align: center;">
+              <label style="font-size: 0.6rem; color: var(--text-secondary); text-transform: uppercase;">Rating Scale</label>
+              <select id="cust-review-rating" class="form-control" style="font-size: 1.25rem; text-align: center; margin: 0.5rem 0;" onchange="state.lastRating = Number(this.value)">
+                <option value="5">⭐⭐⭐⭐⭐ (5/5)</option>
+                <option value="4">⭐⭐⭐⭐ (4/5)</option>
+                <option value="3">⭐⭐⭐ (3/5)</option>
+                <option value="2">⭐⭐ (2/5)</option>
+                <option value="1">⭐ (1/5)</option>
+              </select>
+            </div>
+
+            <div class="phone-app-card">
+              <label style="font-size: 0.6rem; color: var(--text-secondary); text-transform: uppercase;">Comments</label>
+              <textarea id="cust-review-comment" class="form-control" rows="3" style="font-size: 0.75rem; resize: none;" oninput="state.lastComment = this.value">Excellent drive, extremely punctual and polite!</textarea>
+            </div>
+
+            <button class="phone-btn phone-btn-success" style="margin-top: auto;" onclick="custSubmitReview()">Submit Review</button>
+          </div>
+        `;
+      }
+    }
+
+    function renderDriverScreen(screenType, data = null) {
+      const screen = document.getElementById('drivPhoneScreen');
+      if (!screen) return;
+
+      if (screenType === 'login') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>DriveMate Driver</span>
+            <span class="inactive-badge">Offline</span>
+          </div>
+          <div style="margin-top: 1rem;">
+            <div class="phone-welcome-title">Driver Console</div>
+            <div class="phone-welcome-desc">Register services and navigate active bookings.</div>
+            
+            <div class="phone-app-card">
+              <div class="form-group">
+                <label>Driver Phone Number</label>
+                <input type="text" id="driv-phone-input" class="form-control" value="9999999997" placeholder="Enter Phone">
+              </div>
+              <button class="phone-btn" onclick="drivSendOtp()">Send OTP</button>
+            </div>
+            
+            <div style="font-size: 0.65rem; color: var(--text-secondary); text-align: center; margin-top: 2rem;">
+              Simulates driver check-in using mock DB credentials.
+            </div>
+          </div>
+        `;
+      }
+      else if (screenType === 'otp') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>DriveMate Driver</span>
+            <span class="active-badge">Offline</span>
+          </div>
+          <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+            <div class="phone-welcome-title">Verify Number</div>
+            <div class="phone-welcome-desc">Enter the 6-digit code sent to +91 ${state.driverPhone}</div>
+            
+            <div class="phone-app-card">
+              <div class="form-group">
+                <label>Verification Code</label>
+                <input type="text" id="driv-otp-input" class="form-control" value="123456" placeholder="1 2 3 4 5 6">
+              </div>
+            </div>
+            
+            <button class="phone-btn phone-btn-success" style="margin-top: auto;" onclick="drivVerifyOtp()">Verify Code</button>
+          </div>
+        `;
+      }
+      else if (screenType === 'onboard') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>Onboarding Setup</span>
+            <span class="active-badge" style="background-color: var(--accent-yellow); color: white;">NEW USER</span>
+          </div>
+          <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+            <div style="font-size: 0.8rem; font-weight: 800; color: #fff; text-align: center; margin-bottom: 0.25rem;">Complete Onboarding</div>
+            <div style="font-size: 0.65rem; color: var(--text-secondary); text-align: center; margin-bottom: 0.5rem;">Select your profile role and verify details.</div>
+            
+            <div class="phone-app-card" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 14rem; overflow-y: auto;">
+              <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="driv-onboard-name" class="form-control" placeholder="Enter Full Name" value="Ravi Kumar">
+              </div>
+              <div class="form-group">
+                <label>Account Role</label>
+                <select id="driv-onboard-role" class="form-control" onchange="onOnboardRoleChange('driver', this.value)">
+                  <option value="driver">Driver (Earn money)</option>
+                  <option value="customer">Customer (Book a Ride)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Aadhar Card Number</label>
+                <input type="text" id="driv-onboard-aadhar" class="form-control" value="${generateRandomAadhar()}">
+              </div>
+              <div id="driv-onboard-customer-fields" style="display: none;">
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                  <label>Car Number</label>
+                  <input type="text" id="driv-onboard-car-no" class="form-control" value="${generateRandomCarNumber()}">
+                </div>
+                <div class="form-group">
+                  <label>RC Book Number</label>
+                  <input type="text" id="driv-onboard-rc-no" class="form-control" value="${generateRandomRc()}">
+                </div>
+              </div>
+              <div id="driv-onboard-driver-fields">
+                <div class="form-group">
+                  <label>Driving License (DL) Number</label>
+                  <input type="text" id="driv-onboard-dl-no" class="form-control" value="${generateRandomDl()}">
+                </div>
+              </div>
+            </div>
+            
+            <button class="phone-btn phone-btn-success" style="margin-top: auto;" onclick="submitOnboarding('driver')">Create Account</button>
+          </div>
+        `;
+      }
+      else if (screenType === 'home') {
+        const isOnline = state.driverOnline;
+        
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>🏠 Driver Dashboard</span>
+            <span class="active-badge" style="${isOnline ? 'background-color: rgba(16, 185, 129, 0.1); color: var(--accent-green);' : 'background-color: rgba(239, 68, 68, 0.1); color: var(--accent-red);'}">
+              ${isOnline ? 'ONLINE' : 'OFFLINE'}
+            </span>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.6rem; flex: 1;">
+            
+            <!-- Online status switch -->
+            <div class="phone-app-card" style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem;">
+              <div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: #fff;">Online Availability</div>
+                <div style="font-size: 0.6rem; color: var(--text-secondary);">Go online to receive rides.</div>
+              </div>
+              <button class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.7rem; background-color: ${isOnline ? 'var(--accent-red)' : 'var(--accent-green)'}" onclick="toggleDriverOnlineStatus()">
+                ${isOnline ? 'Go Offline' : 'Go Online'}
+              </button>
+            </div>
+
+            <!-- Verified driver credentials -->
+            <div class="phone-app-card" style="font-size: 0.65rem; color: var(--text-secondary); padding: 0.5rem; margin-bottom: 0.1rem;">
+              <div style="font-weight: 700; color: white; margin-bottom: 0.2rem;">Verified Driver Credentials:</div>
+              <div>Aadhar: <b style="color: white;">${state.driverAadhar || 'N/A'}</b></div>
+              <div>DL Number: <b style="color: white;">${state.driverDlNumber || 'N/A'}</b></div>
+            </div>
+
+            <!-- Profile Settings -->
+            <div class="phone-app-card" style="padding: 0.6rem;">
+              <div style="font-size: 0.65rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.5rem;">Service Settings</div>
+              <div style="display: flex; gap: 0.4rem; margin-bottom: 0.4rem;">
+                <div style="flex: 1;">
+                  <label style="font-size: 0.6rem;">Trip Rate (₹)</label>
+                  <input type="number" id="driv-price-input" class="form-control" value="400" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
+                </div>
+                <div style="flex: 1;">
+                  <label style="font-size: 0.6rem;">Exp Years</label>
+                  <input type="number" id="driv-exp-input" class="form-control" value="5" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
+                </div>
+              </div>
+              <button class="phone-btn phone-btn-outline" style="padding: 0.3rem;" onclick="drivUpdateProfile()">Save Profile Settings</button>
+            </div>
+
+            <!-- Navigation Tabs for Driver Phone -->
+            <div style="display: flex; gap: 0.25rem; margin-top: auto;">
+              <button class="phone-btn phone-btn-outline" style="flex: 1; padding: 0.4rem;" onclick="drivShowStats()">📊 Stats</button>
+              <button class="phone-btn phone-btn-outline" style="flex: 1; padding: 0.4rem;" onclick="drivShowReviews()">⭐ Reviews</button>
+            </div>
+
+            <!-- Incoming booking alert slide-up sheet -->
+            <div id="driv-incoming-sheet" class="incoming-alert-sheet">
+              <div style="text-align: center; margin-bottom: 0.75rem;">
+                <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent-cyan); text-transform: uppercase;">Incoming Ride Request</div>
+                <div style="font-size: 0.8rem; font-weight: 700; color: white;">Kanpur Station ➡️ Kalyanpur</div>
+              </div>
+              <div style="background-color: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 6px; font-size: 0.7rem; margin-bottom: 0.75rem; text-align: center;">
+                Total Fare: <b style="color: var(--accent-green);">₹ ${Number(state.activeBooking?.totalAmount ?? 400).toFixed(2)}</b>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button class="phone-btn phone-btn-outline" style="flex: 1;" onclick="drivDeclineBookingRequest()">Decline</button>
+                <button class="phone-btn phone-btn-success" style="flex: 1;" onclick="drivAcceptBookingRequest()">Accept</button>
+              </div>
+            </div>
+
+          </div>
+        `;
+      }
+      else if (screenType === 'ride_active') {
+        const status = state.activeBookingStatus;
+        let actionBtnText = "Mark Arrived";
+        let actionFn = "drivMarkArrived()";
+        let navTitle = "Drive to Pickup";
+        let navDetails = "Head to Kanpur Central Railway Station (150, 350).";
+        let otpInputHtml = '';
+        
+        if (status === 'arrived') {
+          actionBtnText = "Start Trip";
+          actionFn = "drivStartTrip()";
+          navTitle = "Meet Customer";
+          navDetails = "Verify customer boarding. Ask for 4-digit Ride OTP and click 'Start Trip'.";
+          otpInputHtml = `
+            <div class="phone-app-card" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem;">
+              <div style="font-size: 0.65rem; font-weight: 700; color: white;">Enter Customer's Ride OTP:</div>
+              <input type="text" id="driv-ride-otp-input" class="form-control" placeholder="0 0 0 0" 
+                maxlength="4" style="text-align: center; font-size: 1rem; font-weight: 800; letter-spacing: 4px; padding: 0.4rem;"
+                oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            </div>
+          `;
+        } else if (status === 'started') {
+          actionBtnText = "Complete Trip";
+          actionFn = "drivCompleteTrip()";
+          navTitle = "Navigate to Dropoff";
+          navDetails = "Driving along Grand Trunk Rd towards Kalyanpur (380, 200).";
+        }
+
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>🗺️ Navigation</span>
+            <span class="active-badge" style="background-color: var(--primary); color: white;">ACTIVE</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; flex: 1;">
+            
+            <div class="phone-app-card" style="border-left: 4px solid var(--primary);">
+              <div style="font-size: 0.8rem; font-weight: 800; color: #fff;">${navTitle}</div>
+              <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.25rem;">${navDetails}</div>
+            </div>
+
+            <div class="phone-app-card" style="font-size: 0.7rem;">
+              <div style="margin-bottom: 0.25rem;">Passenger: <b>${state.customerName}</b></div>
+              <div style="margin-bottom: 0.25rem;">Pickup: <b>Kanpur Central Station</b></div>
+              <div>Drop: <b>${state.activeBooking?.dropAddress || 'Hourly Package (No Destination)'}</b></div>
+            </div>
+
+            ${otpInputHtml}
+
+            <button class="phone-btn phone-btn-success" style="margin-top: auto;" onclick="${actionFn}">${actionBtnText}</button>
+          </div>
+        `;
+      }
+      else if (screenType === 'collect_cod') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>💰 Collect Cash</span>
+            <span class="active-badge" style="background-color: rgba(245,158,11,0.1); color: var(--accent-yellow);">DUE</span>
+          </div>
+          <div style="display: flex; flex-direction: column; justify-content: center; flex: 1;">
+            
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+              <div style="font-size: 2.2rem;">💵</div>
+              <div style="font-size: 1.1rem; font-weight: 800; color: #fff; margin-top: 0.5rem;">Collect Cash Payment</div>
+              <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">Passenger is instructed to pay cash.</div>
+            </div>
+
+            <div class="phone-app-card" style="margin-bottom: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700;">
+                <span>Total Cash Amount</span>
+                <span style="color: var(--accent-green);">₹ ${Number(state.activeBooking?.totalAmount ?? 400).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <button class="phone-btn phone-btn-success" onclick="drivConfirmCodCollected()">Confirm Cash Collected</button>
+          </div>
+        `;
+      }
+      else if (screenType === 'stats') {
+        const stats = state.driverEarnings || { daily: 400, weekly: 1200, monthly: 2400, total: 3200 };
+        
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>📊 Driver Earnings</span>
+            <button class="btn" style="padding: 0.15rem 0.4rem; font-size: 0.6rem;" onclick="renderDriverScreen('home')">Back</button>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.6rem; flex: 1;">
+            
+            <div style="grid-template-columns: 1fr 1fr; display: grid; gap: 0.4rem;">
+              <div class="phone-app-card" style="text-align: center; padding: 0.5rem;">
+                <div style="font-size: 0.6rem; color: var(--text-secondary);">TODAY</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: var(--accent-green);">₹ ${stats.daily || 0}</div>
+              </div>
+              <div class="phone-app-card" style="text-align: center; padding: 0.5rem;">
+                <div style="font-size: 0.65rem; color: var(--text-secondary);">THIS WEEK</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: var(--accent-green);">₹ ${stats.weekly || 0}</div>
+              </div>
+            </div>
+
+            <div class="phone-app-card" style="text-align: center; padding: 0.6rem;">
+              <div style="font-size: 0.6rem; color: var(--text-secondary);">TOTAL EARNINGS</div>
+              <div style="font-size: 1.4rem; font-weight: 900; color: var(--accent-green);">₹ ${stats.total || 0}</div>
+            </div>
+
+            <div style="font-size: 0.65rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700;">Completed Trips</div>
+            <div id="driv-trips-list" style="overflow-y: auto; max-height: 160px; flex: 1;">
+              <!-- Trips details rendering -->
+              <div style="font-size: 0.65rem; color: var(--text-secondary); text-align: center; padding-top: 1rem;">
+                Loading completed rides list...
+              </div>
+            </div>
+          </div>
+        `;
+        drivLoadStatsData();
+      }
+      else if (screenType === 'reviews') {
+        screen.innerHTML = `
+          <div class="phone-app-header">
+            <span>⭐ Customer Reviews</span>
+            <button class="btn" style="padding: 0.15rem 0.4rem; font-size: 0.6rem;" onclick="renderDriverScreen('home')">Back</button>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.6rem; flex: 1;">
+            
+            <div id="driv-reviews-list" style="overflow-y: auto; flex: 1;">
+              <!-- Reviews list rendering -->
+              <div style="font-size: 0.65rem; color: var(--text-secondary); text-align: center; padding-top: 1rem;">
+                Loading review comments...
+              </div>
+            </div>
+          </div>
+        `;
+        drivLoadReviewsData();
+      }
+    }
+
+
+    /* ========================================================
+       CUSTOMER ACTIONS / TRIGGERS
+       ======================================================== */
+
+    function custSendOtp() {
+      const phone = document.getElementById('cust-phone-input').value.trim();
+      if (!phone || phone.length < 10) {
+        showToast("Please enter a valid 10-digit phone number", "error");
+        return;
+      }
+      state.customerPhone = phone;
+      
+      showToast("Sending OTP SMS via Firebase...", "info");
+      
+      const fullPhone = `+91${phone}`;
+      firebase.auth().signInWithPhoneNumber(fullPhone, window.recaptchaVerifier)
+        .then((confirmationResult) => {
+          window.custConfirmationResult = confirmationResult;
+          showToast(`SMS OTP Sent successfully to +91 ${phone}!`, "success");
+          renderCustomerScreen('otp');
+        })
+        .catch((error) => {
+          showToast("Failed to send SMS OTP: " + error.message, "error");
+          console.error("Firebase sendOtp error", error);
+        });
+    }
+
+    async function custVerifyOtp() {
+      const code = document.getElementById('cust-otp-input').value.trim();
+      if (!code || (code !== '123456' && code.length !== 6)) {
+        showToast("Please enter a valid 6-digit code", "error");
+        return;
+      }
+      
+      showToast("Confirming OTP with Google Firebase...", "info");
+      
+      if (!window.custConfirmationResult) {
+        showToast("No active Firebase session. Please send OTP first.", "error");
+        return;
+      }
+      
+      window.custConfirmationResult.confirm(code)
+        .then(async (result) => {
+          showToast("OTP verified successfully on Firebase!", "success");
+          const idToken = await result.user.getIdToken();
+          
+          showToast("Signing in to backend...", "info");
+          const res = await executeApiRequest('POST', '/functions/v1/auth-session', {
+            firebaseIdToken: idToken
+          });
+          handleCustVerifyResponse(res);
+        })
+        .catch((error) => {
+          showToast("Firebase OTP verification failed: " + error.message, "error");
+          console.error("Firebase OTP verify error", error);
+        });
+    }
+
+    async function handleCustVerifyResponse(res) {
+      if (res.status === 200 && res.data.success && res.data.data) {
+        const data = res.data.data;
+        if (data.isNewUser) {
+          state.tempFirebaseUid = data.firebaseUid;
+          renderCustomerScreen('onboard');
+          showToast("Phone verified! Complete onboarding registration.", "success");
+        } else {
+          if (data.user.role !== 'customer') {
+            showToast(`Registered as '${data.user.role}'. Logging into Driver Phone.`, "warning");
+            state.driverToken = data.accessToken;
+            state.driverUserId = data.user.id;
+            state.driverPhone = state.customerPhone;
+            state.driverName = data.user.fullName || 'Ravi Kumar';
+            state.driverAadhar = data.user.aadharNumber || '';
+            state.driverDlNumber = data.user.dlNumber || '';
+            
+            const profileRes = await executeApiRequest('GET', '/functions/v1/auth-me', null, state.driverToken);
+            if (profileRes.status === 200 && profileRes.data.success && profileRes.data.data.driverProfile) {
+              state.driverProfileId = profileRes.data.data.driverProfile.id;
+              renderDriverScreen('home');
+              syncDriverGPS(state.driverLat, state.driverLng, state.driverOnline);
+            }
+            renderCustomerScreen('login');
+            return;
+          }
+          
+          state.customerToken = data.accessToken;
+          state.customerId = data.user.id;
+          state.customerName = data.user.fullName || 'John Customer';
+          state.customerOtp = data.user.rideOtp || '1234';
+          state.customerAadhar = data.user.aadharNumber || '';
+          state.customerCarNumber = data.user.carNumber || '';
+          state.customerRcNumber = data.user.rcNumber || '';
+          
+          showToast("Client logged in!", "success");
+          renderCustomerScreen('home');
+          
+          if (state.currentStep === 1) {
+            updateStepperProgress(2);
+          }
+        }
+      } else {
+        showToast("Verification failed", "error");
+      }
+    }
+
+    async function custSearchDrivers() {
+      const listEl = document.getElementById('cust-nearby-drivers-list');
+      if (!listEl) return;
+      
+      const service = document.getElementById('cust-ride-service').value;
+      listEl.innerHTML = `<div style="font-size: 0.7rem; color: var(--text-secondary); text-align: center; padding-top: 1rem;">Querying nearby...</div>`;
+      
+      showToast("Searching nearby drivers...", "info");
+      const path = `/functions/v1/drivers-nearby?latitude=${state.pickupLat}&longitude=${state.pickupLng}&radiusKm=10&serviceType=${service}`;
+      const res = await executeApiRequest('GET', path, null, state.customerToken);
+
+      if (res.status === 200 && res.data.success && res.data.data.drivers) {
+        const drivers = res.data.data.drivers;
+        state.nearbyDrivers = drivers;
+        
+        if (drivers.length === 0) {
+          listEl.innerHTML = `<div style="font-size: 0.7rem; color: var(--accent-red); text-align: center; padding-top: 1rem;">No online drivers nearby.<br>Make Driver 1 online!</div>`;
+          document.getElementById('cust-request-btn').disabled = true;
+        } else {
+          listEl.innerHTML = '';
+          drivers.forEach((drv, idx) => {
+            const isSel = idx === 0;
+            if (isSel) {
+              state.selectedDriverId = drv.id;
+            }
+            
+            const div = document.createElement('div');
+            div.className = `driver-selection-item ${isSel ? 'selected' : ''}`;
+            div.onclick = () => selectDriverInApp(drv.id, div);
+            div.innerHTML = `
+              <div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: #fff;">${drv.name || 'Driver'}</div>
+                <div style="font-size: 0.6rem; color: var(--text-secondary);">${drv.experience || '3 years'} • Rating: ⭐${drv.rating.toFixed(1)}</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-green);">₹${drv.pricePerTrip}</div>
+                <div style="font-size: 0.6rem; color: var(--text-secondary);">${drv.distanceKm.toFixed(2)} km away</div>
+              </div>
+            `;
+            listEl.appendChild(div);
+          });
+          document.getElementById('cust-request-btn').disabled = false;
+        }
+        
+        if (state.currentStep === 4) {
+          updateStepperProgress(5);
+        }
+      } else {
+        showToast("Error retrieving drivers list.", "error");
+      }
+    }
+
+    function selectDriverInApp(driverId, element) {
+      state.selectedDriverId = driverId;
+      document.querySelectorAll('.driver-selection-item').forEach(el => {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+    }
+
+    async function custCreateBookingRequest() {
+      const service = document.getElementById('cust-ride-service').value;
+      const rideMode = document.getElementById('cust-ride-mode').value;
+      const vno = document.getElementById('cust-ride-vno').value.trim();
+      
+      const body = {
+        driverId: state.selectedDriverId,
+        serviceType: service,
+        routeType: rideMode === 'hourly' ? 'hourly' : 'one_way',
+        pickupAddress: 'Kanpur Central Station, Station Rd',
+        pickupLatitude: state.pickupLat,
+        pickupLongitude: state.pickupLng,
+        vehicleNumber: vno,
+        vehicleModel: 'Maruti Swift'
+      };
+
+      if (rideMode !== 'hourly') {
+        body.dropAddress = 'Kalyanpur, Kanpur, Uttar Pradesh';
+        body.dropLatitude = state.dropLat;
+        body.dropLongitude = state.dropLng;
+      }
+
+      showToast("Requesting ride booking...", "info");
+      const res = await executeApiRequest('POST', '/functions/v1/bookings-create', body, state.customerToken);
+
+      if (res.status === 200 && res.data.success && res.data.data) {
+        const booking = res.data.data;
+        state.activeBookingId = booking.id;
+        state.activeBooking = booking;
+        state.activeBookingStatus = booking.status;
+        
+        showToast("Booking requested!", "success");
+        renderCustomerScreen('matching');
+        
+        // Auto display incoming request screen on Driver phone if assigned driver is logged in!
+        triggerDriverIncomingAlert(booking);
+        
+        if (state.currentStep === 5) {
+          updateStepperProgress(6);
+        }
+      } else {
+        showToast("Failed to request booking.", "error");
+      }
+    }
+
+    async function cancelActiveBooking() {
+      if (!state.activeBookingId) return;
+      
+      showToast("Cancelling ride request...", "warning");
+      const res = await executeApiRequest('POST', '/functions/v1/bookings-cancel', {
+        bookingId: state.activeBookingId,
+        reason: 'Passenger cancelled'
+      }, state.customerToken);
+
+      if (res.status === 200 && res.data.success) {
+        state.activeBookingId = '';
+        state.activeBooking = null;
+        state.activeBookingStatus = 'none';
+        
+        showToast("Booking cancelled.", "info");
+        renderCustomerScreen('home');
+        renderDriverScreen('home');
+        
+        // Reset map markers
+        document.getElementById('svgPickupMarker').style.display = 'none';
+        document.getElementById('svgDropoffMarker').style.display = 'none';
+        document.getElementById('svgRouteLine').style.opacity = '0';
+      }
+    }
+
+    async function checkPaidStatus() {
+      if (!state.activeBookingId) return;
+      
+      // Fetch latest booking state
+      const res = await executeApiRequest('GET', `/functions/v1/bookings-get?bookingId=${state.activeBookingId}`, null, state.customerToken);
+      if (res.status === 200 && res.data.success) {
+        const booking = res.data.data;
+        if (booking.paymentStatus === 'cod_collected') {
+          showToast("Payment verified by driver!", "success");
+          renderCustomerScreen('review');
+        } else {
+          showToast("Payment still pending confirmation.", "warning");
+        }
+      }
+    }
+
+    async function custSubmitReview() {
+      if (!state.activeBookingId) return;
+      
+      const body = {
+        bookingId: state.activeBookingId,
+        rating: state.lastRating,
+        comment: state.lastComment
+      };
+
+      showToast("Submitting feedback review...", "info");
+      const res = await executeApiRequest('POST', '/functions/v1/reviews-create', body, state.customerToken);
+
+      if (res.status === 200 && res.data.success) {
+        showToast("Review submitted successfully!", "success");
+        state.activeBookingId = '';
+        state.activeBooking = null;
+        state.activeBookingStatus = 'none';
+        
+        renderCustomerScreen('home');
+        
+        // Hide map markers
+        document.getElementById('svgPickupMarker').style.display = 'none';
+        document.getElementById('svgDropoffMarker').style.display = 'none';
+        document.getElementById('svgRouteLine').style.opacity = '0';
+
+        if (state.currentStep === 11) {
+          updateStepperProgress(12);
+        }
+      } else {
+        showToast("Failed to submit review.", "error");
+      }
+    }
+
+
+    /* ========================================================
+       DRIVER ACTIONS / TRIGGERS
+       ======================================================== */
+
+    function drivSendOtp() {
+      const phone = document.getElementById('driv-phone-input').value.trim();
+      if (!phone || phone.length < 10) {
+        showToast("Please enter a valid 10-digit phone number", "error");
+        return;
+      }
+      state.driverPhone = phone;
+      
+      showToast("Sending OTP SMS via Firebase...", "info");
+      
+      const fullPhone = `+91${phone}`;
+      firebase.auth().signInWithPhoneNumber(fullPhone, window.recaptchaVerifier)
+        .then((confirmationResult) => {
+          window.drivConfirmationResult = confirmationResult;
+          showToast(`SMS OTP Sent successfully to +91 ${phone}!`, "success");
+          renderDriverScreen('otp');
+        })
+        .catch((error) => {
+          showToast("Failed to send SMS OTP: " + error.message, "error");
+          console.error("Firebase sendOtp error", error);
+        });
+    }
+
+    async function drivVerifyOtp() {
+      const code = document.getElementById('driv-otp-input').value.trim();
+      if (!code || (code !== '123456' && code.length !== 6)) {
+        showToast("Please enter a valid 6-digit code", "error");
+        return;
+      }
+      
+      showToast("Confirming OTP with Google Firebase...", "info");
+      
+      if (!window.drivConfirmationResult) {
+        showToast("No active Firebase session. Please send OTP first.", "error");
+        return;
+      }
+      
+      window.drivConfirmationResult.confirm(code)
+        .then(async (result) => {
+          showToast("OTP verified successfully on Firebase!", "success");
+          const idToken = await result.user.getIdToken();
+          
+          showToast("Signing in to backend...", "info");
+          const res = await executeApiRequest('POST', '/functions/v1/auth-session', {
+            firebaseIdToken: idToken
+          });
+          handleDrivVerifyResponse(res);
+        })
+        .catch((error) => {
+          showToast("Firebase OTP verification failed: " + error.message, "error");
+          console.error("Firebase OTP verify error", error);
+        });
+    }
+
+    async function handleDrivVerifyResponse(res) {
+      if (res.status === 200 && res.data.success && res.data.data) {
+        const data = res.data.data;
+        if (data.isNewUser) {
+          state.tempFirebaseUid = data.firebaseUid;
+          renderDriverScreen('onboard');
+          showToast("Phone verified! Complete onboarding registration.", "success");
+        } else {
+          if (data.user.role !== 'driver') {
+            showToast(`Registered as '${data.user.role}'. Logging into Client Phone.`, "warning");
+            state.customerToken = data.accessToken;
+            state.customerId = data.user.id;
+            state.customerPhone = state.driverPhone;
+            state.customerName = data.user.fullName || 'John Customer';
+            state.customerOtp = data.user.rideOtp || '1234';
+            state.customerAadhar = data.user.aadharNumber || '';
+            state.customerCarNumber = data.user.carNumber || '';
+            state.customerRcNumber = data.user.rcNumber || '';
+            renderCustomerScreen('home');
+            
+            renderDriverScreen('login');
+            return;
+          }
+          
+          state.driverToken = data.accessToken;
+          state.driverUserId = data.user.id;
+          state.driverName = data.user.fullName || 'Ravi Kumar';
+          state.driverAadhar = data.user.aadharNumber || '';
+          state.driverDlNumber = data.user.dlNumber || '';
+          
+          const profileRes = await executeApiRequest('GET', '/functions/v1/auth-me', null, state.driverToken);
+          if (profileRes.status === 200 && profileRes.data.success && profileRes.data.data.driverProfile) {
+            state.driverProfileId = profileRes.data.data.driverProfile.id;
+            showToast("Driver logged in!", "success");
+            renderDriverScreen('home');
+            syncDriverGPS(state.driverLat, state.driverLng, state.driverOnline);
+            
+            if (state.currentStep === 2) {
+              updateStepperProgress(3);
+            }
+          } else {
+            showToast("Driver account profile setup missing.", "error");
+          }
+        }
+      } else {
+        showToast("Verification failed", "error");
+      }
+    }
+
+    async function toggleDriverOnlineStatus() {
+      state.driverOnline = !state.driverOnline;
+      state.driverAvailable = state.driverOnline;
+      
+      showToast(state.driverOnline ? "Going Online..." : "Going Offline...", "info");
+      
+      // Update location status on backend
+      const resLoc = await syncDriverGPS(state.driverLat, state.driverLng, state.driverOnline);
+      
+      if (resLoc) {
+        // Update availability toggle
+        const resAvail = await executeApiRequest('POST', '/functions/v1/drivers-availability', {
+          isAvailable: state.driverAvailable
+        }, state.driverToken);
+        
+        if (resAvail.status === 200) {
+          showToast(state.driverOnline ? "Driver is ONLINE" : "Driver is OFFLINE", "success");
+          renderDriverScreen('home');
+          
+          // Animate car color update on map
+          const carEl = document.getElementById('svgDriver1Car');
+          if (carEl) {
+            carEl.querySelector('circle').setAttribute('fill', state.driverOnline ? 'rgba(16, 185, 129, 0.2)' : 'rgba(148, 163, 184, 0.2)');
+            carEl.querySelector('circle:nth-child(2)').setAttribute('fill', state.driverOnline ? '#10b981' : '#94a3b8');
+          }
+          
+          if (state.currentStep === 3 && state.driverOnline) {
+            updateStepperProgress(4);
+          }
+        }
+      }
+    }
+
+    async function syncDriverGPS(lat, lng, isOnline) {
+      const body = {
+        latitude: Number(lat.toFixed(5)),
+        longitude: Number(lng.toFixed(5)),
+        heading: 90,
+        speed: 0,
+        accuracy: 10,
+        isOnline: isOnline
+      };
+      
+      const res = await executeApiRequest('POST', '/functions/v1/drivers-location', body, state.driverToken);
+      return res.status === 200;
+    }
+
+    async function drivUpdateProfile() {
+      const price = Number(document.getElementById('driv-price-input').value);
+      const exp = Number(document.getElementById('driv-exp-input').value);
+      
+      const body = {
+        pricePerTrip: price,
+        experienceYears: exp,
+        licenseNumber: 'UP78-LIC-9988',
+        languages: 'Hindi, English',
+        email: 'ravi@drivemate.com',
+        serviceLocal: true,
+        serviceAirport: true,
+        serviceOutstation: true,
+        serviceMonthly: false,
+        serviceNight: true
+      };
+
+      showToast("Updating service settings...", "info");
+      const res = await executeApiRequest('PATCH', '/functions/v1/drivers-profile', body, state.driverToken);
+      if (res.status === 200 && res.data.success) {
+        showToast("Profile settings saved!", "success");
+      } else {
+        showToast("Failed to save profile settings.", "error");
+      }
+    }
+
+    function triggerDriverIncomingAlert(booking) {
+      // Check if logged in driver is assigned
+      if (booking.driverId === state.driverProfileId) {
+        setTimeout(() => {
+          const sheet = document.getElementById('driv-incoming-sheet');
+          if (sheet) sheet.classList.add('show');
+        }, 1000);
+      }
+    }
+
+    async function drivAcceptBookingRequest() {
+      const sheet = document.getElementById('driv-incoming-sheet');
+      if (sheet) sheet.classList.remove('show');
+      
+      showToast("Accepting booking...", "info");
+      const res = await executeApiRequest('POST', '/functions/v1/bookings-accept', {
+        bookingId: state.activeBookingId
+      }, state.driverToken);
+
+      if (res.status === 200 && res.data.success) {
+        showToast("Booking accepted! Starting navigation...", "success");
+        state.activeBookingStatus = 'driver_accepted';
+        state.activeBooking = res.data.data;
+        renderDriverScreen('ride_active');
+        renderCustomerScreen('ride_active');
+        
+        // Render Route and Markers on Kanpur Map
+        renderMapRideDetails();
+        
+        // Trigger GPS car movement towards Pickup coordinates (150, 350)
+        animateDriverCar(state.driverLat, state.driverLng, state.pickupLat, state.pickupLng, () => {
+          state.driverLat = state.pickupLat;
+          state.driverLng = state.pickupLng;
+          showToast("You have arrived at pickup location!", "info");
+        });
+
+        if (state.currentStep === 6) {
+          updateStepperProgress(7);
+        }
+      }
+    }
+
+    async function drivDeclineBookingRequest() {
+      const sheet = document.getElementById('driv-incoming-sheet');
+      if (sheet) sheet.classList.remove('show');
+      
+      showToast("Declining booking...", "warning");
+      const res = await executeApiRequest('POST', '/functions/v1/bookings-decline', {
+        bookingId: state.activeBookingId,
+        reason: 'Driver busy'
+      }, state.driverToken);
+
+      if (res.status === 200 && res.data.success) {
+        state.activeBookingId = '';
+        state.activeBooking = null;
+        state.activeBookingStatus = 'none';
+        
+        showToast("Booking request declined.", "info");
+        renderDriverScreen('home');
+        renderCustomerScreen('home');
+      }
+    }
+
+    async function drivMarkArrived() {
+      showToast("Marking arrived...", "info");
+      const res = await executeApiRequest('POST', '/functions/v1/bookings-arrived', {
+        bookingId: state.activeBookingId
+      }, state.driverToken);
+
+      if (res.status === 200 && res.data.success) {
+        showToast("Passenger notified: Arrived!", "success");
+        state.activeBookingStatus = 'arrived';
+        state.activeBooking = res.data.data;
+        renderDriverScreen('ride_active');
+        renderCustomerScreen('ride_active');
+        
+        if (state.currentStep === 7) {
+          updateStepperProgress(8);
+        }
+      }
+    }
+
+    async function drivStartTrip() {
+      const otpInput = document.getElementById('driv-ride-otp-input');
+      let otp = otpInput ? otpInput.value.trim() : '';
+      if (!otp) {
+        // Fallback for automated stepper or if not typed
+        otp = state.customerOtp || '1234';
+      }
+
+      if (!otp || otp.length !== 4) {
+        showToast("Please enter a valid 4-digit OTP", "error");
+        return;
+      }
+
+      showToast("Starting trip...", "info");
+      const res = await executeApiRequest('POST', '/functions/v1/bookings-start', {
+        bookingId: state.activeBookingId,
+        otp: otp
+      }, state.driverToken);
+
+      if (res.status === 200 && res.data.success) {
+        showToast("Trip started! Happy driving.", "success");
+        state.activeBookingStatus = 'started';
+        state.activeBooking = res.data.data;
+        renderDriverScreen('ride_active');
+        renderCustomerScreen('ride_active');
+        
+        // Trigger GPS car movement. If Hourly, simulate driving around slightly and staying near pickup.
+        const isHourly = state.activeBooking && state.activeBooking.routeType === 'hourly';
+        if (!isHourly && state.dropLat && state.dropLng) {
+          animateDriverCar(state.pickupLat, state.pickupLng, state.dropLat, state.dropLng, () => {
+            state.driverLat = state.dropLat;
+            state.driverLng = state.dropLng;
+            showToast("Arrived at Kalyanpur destination!", "info");
+          });
+        } else {
+          showToast("Simulating driver moving around Kanpur Central...", "info");
+          animateDriverCar(state.pickupLat, state.pickupLng, state.pickupLat + 0.003, state.pickupLng + 0.003, () => {
+            state.driverLat = state.pickupLat + 0.003;
+            state.driverLng = state.pickupLng + 0.003;
+            showToast("Hourly drive session in progress...", "info");
+          });
+        }
+
+        if (state.currentStep === 8) {
+          updateStepperProgress(9);
+        }
+      } else {
+        const errorMsg = res.data?.error?.message || "Failed to start trip. Invalid OTP.";
+        showToast(errorMsg, "error");
+      }
+    }
+
+    async function drivCompleteTrip() {
+      showToast("Completing trip...", "info");
+      const res = await executeApiRequest('POST', '/functions/v1/bookings-complete', {
+        bookingId: state.activeBookingId
+      }, state.driverToken);
+
+      if (res.status === 200 && res.data.success) {
+        showToast("Trip completed! Awaiting cash payment.", "success");
+        state.activeBookingStatus = 'completed';
+        state.activeBooking = res.data.data;
+        renderDriverScreen('collect_cod');
+        renderCustomerScreen('payment');
+        
+        if (state.currentStep === 9) {
+          updateStepperProgress(10);
+        }
+      }
+    }
+
+    async function drivConfirmCodCollected() {
+      showToast("Confirming payment collection...", "info");
+      const res = await executeApiRequest('POST', '/functions/v1/payments-mark-cod-collected', {
+        bookingId: state.activeBookingId
+      }, state.driverToken);
+
+      if (res.status === 200 && res.data.success) {
+        showToast("COD Payment completed!", "success");
+        if (state.activeBooking) {
+          state.activeBooking.paymentStatus = 'cod_collected';
+        }
+        renderDriverScreen('home');
+        renderCustomerScreen('review');
+        
+        if (state.currentStep === 10) {
+          updateStepperProgress(11);
+        }
+      }
+    }
+
+    async function drivConfirmPaidInvoiceStatus() {
+      // Background loop handles updating client view automatically
+    }
+
+    async function drivLoadStatsData() {
+      const listEl = document.getElementById('driv-trips-list');
+      if (!listEl) return;
+      
+      const res = await executeApiRequest('GET', '/functions/v1/drivers-earnings', null, state.driverToken);
+      if (res.status === 200 && res.data.success && res.data.data) {
+        state.driverEarnings = res.data.data.earnings;
+        const trips = res.data.data.trips || [];
+        
+        if (trips.length === 0) {
+          listEl.innerHTML = `<div style="font-size: 0.7rem; color: var(--text-secondary); text-align: center; padding-top: 1rem;">No completed trips logged.</div>`;
+        } else {
+          listEl.innerHTML = '';
+          trips.forEach(trip => {
+            const div = document.createElement('div');
+            div.className = 'phone-app-card';
+            div.style.marginBottom = '0.4rem';
+            div.style.padding = '0.5rem';
+            div.style.fontSize = '0.7rem';
+            div.innerHTML = `
+              <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.2rem;">
+                <span>Ride #${trip.bookingNumber || 'DM001'}</span>
+                <span style="color: var(--accent-green);">₹${trip.totalAmount}</span>
+              </div>
+              <div style="font-size: 0.6rem; color: var(--text-secondary);">Pickup: ${trip.pickupAddress}</div>
+            `;
+            listEl.appendChild(div);
+          });
+        }
+      }
+    }
+
+    async function drivLoadReviewsData() {
+      const listEl = document.getElementById('driv-reviews-list');
+      if (!listEl) return;
+      
+      const res = await executeApiRequest('GET', `/functions/v1/reviews-by-driver?driverId=${state.driverProfileId}`, null, state.driverToken);
+      if (res.status === 200 && res.data.success && res.data.data) {
+        const reviews = res.data.data.reviews || [];
+        state.driverReviews = reviews;
+        
+        if (reviews.length === 0) {
+          listEl.innerHTML = `<div style="font-size: 0.7rem; color: var(--text-secondary); text-align: center; padding-top: 1rem;">No customer reviews posted yet.</div>`;
+        } else {
+          listEl.innerHTML = '';
+          reviews.forEach(rev => {
+            const div = document.createElement('div');
+            div.className = 'phone-app-card';
+            div.style.marginBottom = '0.4rem';
+            div.style.padding = '0.5rem';
+            div.style.fontSize = '0.7rem';
+            
+            let stars = '';
+            for (let i = 0; i < rev.rating; i++) stars += '⭐';
+            
+            div.innerHTML = `
+              <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 0.2rem;">
+                <span style="color: var(--accent-yellow);">${stars}</span>
+                <span style="font-size: 0.6rem; color: var(--text-secondary);">${new Date(rev.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div style="font-style: italic; color: #fff; margin-top: 0.25rem;">"${rev.comment || 'No comment left'}"</div>
+            `;
+            listEl.appendChild(div);
+          });
+        }
+      }
+    }
+
+    function drivShowStats() {
+      renderDriverScreen('stats');
+    }
+
+    function drivShowReviews() {
+      renderDriverScreen('reviews');
+    }
+
+
+    /* ========================================================
+       GUIDED STEP AUTOMATED CONTROLLERS
+       ======================================================== */
+
+    function resetScenario() {
+      state.currentStep = 1;
+      state.activeBookingId = '';
+      state.activeBooking = null;
+      state.activeBookingStatus = 'none';
+      
+      renderCustomerScreen('login');
+      renderDriverScreen('login');
+      
+      // Hide map elements
+      document.getElementById('svgPickupMarker').style.display = 'none';
+      document.getElementById('svgDropoffMarker').style.display = 'none';
+      document.getElementById('svgRouteLine').style.opacity = '0';
+      
+      // Reset driver car coordinates on map
+      const initialPos = latLngToSvg(26.4499, 80.3319);
+      const carEl = document.getElementById('svgDriver1Car');
+      if (carEl) {
+        carEl.setAttribute('transform', `translate(${initialPos.x}, ${initialPos.y})`);
+      }
+
+      // Re-enable and reset stepper steps
+      for (let i = 1; i <= 12; i++) {
+        const item = document.getElementById(`step-${i}`);
+        const actionBtn = item.querySelector('.step-actions button');
+        const varsBox = document.getElementById(`step-${i}-vars`);
+        
+        item.className = 'step-item';
+        varsBox.className = 'step-variables';
+        varsBox.innerHTML = '';
+        if (actionBtn) {
+          actionBtn.disabled = i > 1;
+        }
+      }
+      document.getElementById('step-1').className = 'step-item active';
+
+      showToast("Sandbox simulation reset.", "warning");
+    }
+
+    function updateStepperProgress(nextStep) {
+      state.currentStep = nextStep;
+      
+      for (let i = 1; i <= 12; i++) {
+        const item = document.getElementById(`step-${i}`);
+        const actionBtn = item.querySelector('.step-actions button');
+        const varsBox = document.getElementById(`step-${i}-vars`);
+        
+        item.className = 'step-item';
+        if (actionBtn) actionBtn.disabled = true;
+        
+        if (i < nextStep) {
+          item.classList.add('completed');
+          varsBox.className = 'step-variables visible';
+          varsBox.innerHTML = getStepVarsCache(i);
+        }
+      }
+      
+      if (nextStep <= 12) {
+        const nextItem = document.getElementById(`step-${nextStep}`);
+        const nextBtn = nextItem.querySelector('.step-actions button');
+        nextItem.classList.add('active');
+        if (nextBtn) nextBtn.disabled = false;
+      }
+    }
+
+    function getStepVarsCache(step) {
+      switch(step) {
+        case 1: return `Customer ID: ${state.customerId.slice(0, 18)}...<br>Token loaded into Client Phone.`;
+        case 2: return `Driver User ID: ${state.driverUserId.slice(0, 18)}...<br>Token loaded into Driver Phone.`;
+        case 3: return `GPS Status: ONLINE & ACTIVE<br>Coords: 26.4499, 80.3319`;
+        case 4: return `Search details: 1 driver found nearby.`;
+        case 5: return `Booking ID: ${state.activeBookingId.slice(0, 18)}...<br>Status: PENDING`;
+        case 6: return `Booking Status: ACCEPTED<br>Driver is now heading to pickup.`;
+        case 7: return `Booking Status: ARRIVED<br>Driver has reached customer station.`;
+        case 8: return `Booking Status: STARTED<br>Trip is in progress to Kalyanpur.`;
+        case 9: return `Booking Status: COMPLETED<br>Payment Status: COD_DUE`;
+        case 10: return `Payment Status: COD_COLLECTED<br>Trip cash collected successfully.`;
+        case 11: return `Review status: SUBMITTED (5 Stars)`;
+        case 12: return `Simulation Complete!<br>Backend metrics updated.`;
+      }
+    }
+
+    // Step Triggers
+    async function runStep1() {
+      const phoneInput = '9999999999';
+      const body = { firebaseIdToken: `mock-token-${phoneInput}`, role: 'customer' };
+      
+      showToast("Step 1: Authenticating Customer...", "info");
+      const res = await executeApiRequest('POST', '/functions/v1/auth-session', body, 'mock-bypass');
+      
+      if (res.status === 200 && res.data.success && res.data.data) {
+        state.customerToken = res.data.data.accessToken;
+        state.customerId = res.data.data.user.id;
+        state.customerPhone = phoneInput;
+        state.customerName = res.data.data.user.fullName || 'John Customer';
+        
+        renderCustomerScreen('home');
+        updateStepperProgress(2);
+        showToast("Customer authenticated!", "success");
+      }
+    }
+
+    async function runStep2() {
+      const phoneInput = '9999999997';
+      const body = { firebaseIdToken: `mock-token-${phoneInput}`, role: 'driver' };
+      
+      showToast("Step 2: Authenticating Driver...", "info");
+      const res = await executeApiRequest('POST', '/functions/v1/auth-session', body, 'mock-bypass');
+      
+      if (res.status === 200 && res.data.success && res.data.data) {
+        state.driverToken = res.data.data.accessToken;
+        state.driverUserId = res.data.data.user.id;
+        state.driverPhone = phoneInput;
+        state.driverName = res.data.data.user.fullName || 'Ravi Kumar';
+        
+        const profileRes = await executeApiRequest('GET', '/functions/v1/auth-me', null, state.driverToken);
+        if (profileRes.status === 200 && profileRes.data.success && profileRes.data.data.driverProfile) {
+          state.driverProfileId = profileRes.data.data.driverProfile.id;
+          
+          renderDriverScreen('home');
+          updateStepperProgress(3);
+          showToast("Driver authenticated!", "success");
+        }
+      }
+    }
+
+    async function runStep3() {
+      showToast("Step 3: Activating Driver GPS & status...", "info");
+      const resLoc = await syncDriverGPS(state.driverLat, state.driverLng, true);
+      
+      if (resLoc) {
+        const resAvail = await executeApiRequest('POST', '/functions/v1/drivers-availability', {
+          isAvailable: true
+        }, state.driverToken);
+        
+        if (resAvail.status === 200) {
+          state.driverOnline = true;
+          state.driverAvailable = true;
+          
+          renderDriverScreen('home');
+          
+          const carEl = document.getElementById('svgDriver1Car');
+          if (carEl) {
+            carEl.querySelector('circle').setAttribute('fill', 'rgba(16, 185, 129, 0.2)');
+            carEl.querySelector('circle:nth-child(2)').setAttribute('fill', '#10b981');
+          }
+          
+          updateStepperProgress(4);
+          showToast("Driver is active & online!", "success");
+        }
+      }
+    }
+
+    async function runStep4() {
+      showToast("Step 4: Querying nearby drivers...", "info");
+      const path = `/functions/v1/drivers-nearby?latitude=${state.pickupLat}&longitude=${state.pickupLng}&radiusKm=10`;
+      const res = await executeApiRequest('GET', path, null, state.customerToken);
+
+      if (res.status === 200 && res.data.success && res.data.data.drivers.length > 0) {
+        custSearchDrivers(); // Populates list in app
+        updateStepperProgress(5);
+        showToast("Drivers discovered nearby!", "success");
+      }
+    }
+
+    async function runStep5() {
+      showToast("Step 5: Requesting booking...", "info");
+      custCreateBookingRequest();
+    }
+
+    async function runStep6() {
+      showToast("Step 6: Accepting ride request...", "info");
+      drivAcceptBookingRequest();
+    }
+
+    async function runStep7() {
+      showToast("Step 7: Driver marking arrived...", "info");
+      drivMarkArrived();
+    }
+
+    async function runStep8() {
+      showToast("Step 8: Starting trip...", "info");
+      drivStartTrip();
+    }
+
+    async function runStep9() {
+      showToast("Step 9: Completing ride trip...", "info");
+      drivCompleteTrip();
+    }
+
+    async function runStep10() {
+      showToast("Step 10: Collecting COD payment...", "info");
+      drivConfirmCodCollected();
+    }
+
+    async function runStep11() {
+      showToast("Step 11: Passenger leaving review...", "info");
+      custSubmitReview();
+    }
+
+    async function runStep12() {
+      showToast("Step 12: Querying earnings & metrics...", "info");
+      
+      // Execute stats call
+      const statRes = await executeApiRequest('GET', '/functions/v1/drivers-earnings', null, state.driverToken);
+      if (statRes.status === 200) {
+        // Execute reviews list call
+        const revRes = await executeApiRequest('GET', `/functions/v1/reviews-by-driver?driverId=${state.driverProfileId}`, null, state.driverToken);
+        if (revRes.status === 200) {
+          updateStepperProgress(13);
+          showToast("Simulation verified successfully!", "success");
+        }
+      }
+    }
+
+
+    /* ========================================================
+       REAL-TIME MAP RENDERING & CAR ANIMATION
+       ======================================================== */
+
+    function renderMapRideDetails() {
+      const pLoc = latLngToSvg(state.pickupLat, state.pickupLng);
+      
+      const pMarker = document.getElementById('svgPickupMarker');
+      const dMarker = document.getElementById('svgDropoffMarker');
+      const routeLine = document.getElementById('svgRouteLine');
+      
+      pMarker.style.display = 'block';
+
+      const isHourly = state.activeBooking && state.activeBooking.routeType === 'hourly';
+      
+      if (!isHourly && state.dropLat && state.dropLng) {
+        const dLoc = latLngToSvg(state.dropLat, state.dropLng);
+        dMarker.style.display = 'block';
+        routeLine.setAttribute('d', `M ${pLoc.x},${pLoc.y} L ${dLoc.x},${dLoc.y}`);
+        routeLine.style.opacity = '0.85';
+      } else {
+        dMarker.style.display = 'none';
+        routeLine.style.opacity = '0';
+      }
+    }
+
+    // Smooth coordinate animations for driver vehicle on Kanpur SVG Map
+    let animInterval = null;
+    function animateDriverCar(fromLat, fromLng, toLat, toLng, onComplete) {
+      if (animInterval) clearInterval(animInterval);
+      
+      let currLat = fromLat;
+      let currLng = fromLng;
+      const steps = 25;
+      let step = 0;
+      
+      const stepLat = (toLat - fromLat) / steps;
+      const stepLng = (toLng - fromLng) / steps;
+
+      animInterval = setInterval(async () => {
+        step++;
+        currLat += stepLat;
+        currLng += stepLng;
+
+        // Push temporary location update to backend to simulate real-time tracking
+        if (step % 5 === 0) {
+          syncDriverGPS(currLat, currLng, true);
+        }
+
+        // Render current location on SVG map
+        const coords = latLngToSvg(currLat, currLng);
+        const carEl = document.getElementById('svgDriver1Car');
+        if (carEl) {
+          carEl.setAttribute('transform', `translate(${coords.x}, ${coords.y})`);
+          
+          // Calculate heading angle
+          const angle = Math.atan2(stepLat, stepLng) * (180 / Math.PI);
+          carEl.querySelector('polygon').setAttribute('transform', `rotate(${-angle})`);
+        }
+
+        if (step >= steps) {
+          clearInterval(animInterval);
+          // Sync exact end GPS coordinate
+          syncDriverGPS(toLat, toLng, true);
+          if (onComplete) onComplete();
+        }
+      }, 100);
+    }
+
+    // Automatically poll active booking state from backend in the background
+    async function syncBookingState() {
+      if (!state.activeBookingId) return;
+      
+      const token = state.customerToken || state.driverToken;
+      if (!token) return;
+      
+      try {
+        const response = await fetch(`${state.baseUrl}/functions/v1/bookings-get?bookingId=${state.activeBookingId}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const envelope = await response.json();
+          if (envelope.success && envelope.data) {
+            const booking = envelope.data;
+            const oldStatus = state.activeBookingStatus;
+            state.activeBookingStatus = booking.status;
+            state.activeBooking = booking;
+            
+            // Sync HUD displays
+            document.getElementById('hudBookingNo').textContent = booking.bookingNumber;
+            document.getElementById('hudBookingStatus').textContent = booking.status.toUpperCase();
+            document.getElementById('hudBookingFare').textContent = `₹ ${Number(booking.totalAmount).toFixed(2)}`;
+
+            // Sync phone screens if state changed
+            if (oldStatus !== booking.status) {
+              syncScreensToBooking(booking);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Poller error:", err);
+      }
+    }
+
+    function syncScreensToBooking(booking) {
+      // 1. Sync Customer App screen
+      if (booking.status === 'pending') {
+        renderCustomerScreen('matching');
+      } 
+      else if (['driver_accepted', 'arrived', 'started'].includes(booking.status)) {
+        renderCustomerScreen('ride_active');
+      } 
+      else if (booking.status === 'completed') {
+        if (booking.paymentStatus === 'cod_collected') {
+          renderCustomerScreen('review');
+        } else {
+          renderCustomerScreen('payment');
+        }
+      }
+
+      // 2. Sync Driver App screen
+      if (['driver_accepted', 'arrived', 'started'].includes(booking.status)) {
+        renderDriverScreen('ride_active');
+      } 
+      else if (booking.status === 'completed') {
+        if (booking.paymentStatus === 'cod_collected') {
+          renderDriverScreen('home');
+        } else {
+          renderDriverScreen('collect_cod');
+        }
+      }
+    }
+
+
+    /* ========================================================
+       MANUAL ACCORDION CONSOLE SUBMISSIONS
+       ======================================================== */
+
+    async function runManualSession() {
+      const tok = document.getElementById('man-session-token').value.trim();
+      const role = document.getElementById('man-session-role').value;
+      const res = await executeApiRequest('POST', '/functions/v1/auth-session', { firebaseIdToken: tok, role });
+      
+      if (res.status === 200 && res.data.success && res.data.data) {
+        const token = res.data.data.accessToken;
+        if (role === 'customer') {
+          state.customerToken = token;
+          state.customerId = res.data.data.user.id;
+          renderCustomerScreen('home');
+        } else {
+          state.driverToken = token;
+          state.driverUserId = res.data.data.user.id;
+          renderDriverScreen('home');
+        }
+        showToast("JWT loaded into respective app console!", "success");
+      }
+    }
+
+    async function runManualNearby() {
+      const lat = Number(document.getElementById('man-nearby-lat').value);
+      const lng = Number(document.getElementById('man-nearby-lng').value);
+      const radius = Number(document.getElementById('man-nearby-radius').value);
+      
+      const path = `/functions/v1/drivers-nearby?latitude=${lat}&longitude=${lng}&radiusKm=${radius}`;
+      await executeApiRequest('GET', path);
+    }
+
+    async function runManualLocation() {
+      const lat = Number(document.getElementById('man-loc-lat').value);
+      const lng = Number(document.getElementById('man-loc-lng').value);
+      const online = document.getElementById('man-loc-online').value === 'true';
+      
+      const body = {
+        latitude: lat,
+        longitude: lng,
+        heading: 90,
+        speed: 0,
+        accuracy: 10,
+        isOnline: online
+      };
+      await executeApiRequest('POST', '/functions/v1/drivers-location', body);
+    }
+
+    async function runManualBookingCreate() {
+      const drv = document.getElementById('man-book-driver').value.trim();
+      const vno = document.getElementById('man-book-vno').value.trim();
+      const vmod = document.getElementById('man-book-vmod').value.trim();
+
+      const body = {
+        driverId: drv,
+        serviceType: 'local',
+        routeType: 'one_way',
+        pickupAddress: 'Kanpur Station',
+        pickupLatitude: state.pickupLat,
+        pickupLongitude: state.pickupLng,
+        dropAddress: 'Kalyanpur',
+        dropLatitude: state.dropLat,
+        dropLongitude: state.dropLng,
+        vehicleNumber: vno,
+        vehicleModel: vmod
+      };
+      const res = await executeApiRequest('POST', '/functions/v1/bookings-create', body);
+      if (res.status === 200 && res.data.success && res.data.data) {
+        state.activeBookingId = res.data.data.id;
+        state.activeBooking = res.data.data;
+        state.activeBookingStatus = res.data.data.status;
+        renderCustomerScreen('matching');
+      }
+    }
+
+    function toggleRideMode(val) {
+      const el = document.getElementById('cust-dropoff-group');
+      if (el) {
+        if (val === 'hourly') {
+          el.style.display = 'none';
+        } else {
+          el.style.display = 'block';
+        }
+      }
+    }
+
+    function onOnboardRoleChange(side, role) {
+      const custFields = document.getElementById(`${side}-onboard-customer-fields`);
+      const drivFields = document.getElementById(`${side}-onboard-driver-fields`);
+      if (role === 'customer') {
+        if (custFields) custFields.style.display = 'block';
+        if (drivFields) drivFields.style.display = 'none';
+      } else {
+        if (custFields) custFields.style.display = 'none';
+        if (drivFields) drivFields.style.display = 'block';
+      }
+    }
+
+    function generateRandomAadhar() {
+      return Math.floor(100000000000 + Math.random() * 900000000000).toString().replace(/(\d{4})/g, '$1 ').trim();
+    }
+
+    function generateRandomCarNumber() {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const letters = chars[Math.floor(Math.random() * 26)] + chars[Math.floor(Math.random() * 26)];
+      const num1 = Math.floor(10 + Math.random() * 90);
+      const num2 = Math.floor(1000 + Math.random() * 9000);
+      return `UP${num1}${letters}${num2}`;
+    }
+
+    function generateRandomRc() {
+      return "RC" + Math.floor(10000000 + Math.random() * 90000000);
+    }
+
+    function generateRandomDl() {
+      return "DL-" + Math.floor(100000000000 + Math.random() * 900000000000);
+    }
+
+    async function submitOnboarding(side) {
+      const prefix = side === 'customer' ? 'cust' : 'driv';
+      const name = document.getElementById(`${prefix}-onboard-name`).value.trim();
+      const role = document.getElementById(`${prefix}-onboard-role`).value;
+      if (!name) {
+        showToast("Please enter your name", "error");
+        return;
+      }
+      
+      const aadharNumber = document.getElementById(`${prefix}-onboard-aadhar`).value.trim();
+      let carNumber = null;
+      let rcNumber = null;
+      let dlNumber = null;
+      
+      if (role === 'customer') {
+        carNumber = document.getElementById(`${prefix}-onboard-car-no`).value.trim();
+        rcNumber = document.getElementById(`${prefix}-onboard-rc-no`).value.trim();
+      } else {
+        dlNumber = document.getElementById(`${prefix}-onboard-dl-no`).value.trim();
+      }
+      
+      showToast("Completing registration with details...", "info");
+      const phoneInput = side === 'customer' ? state.customerPhone : state.driverPhone;
+      const res = await executeApiRequest('POST', '/functions/v1/auth-session', {
+        firebaseIdToken: `mock-token-${phoneInput}`,
+        role: role,
+        fullName: name,
+        aadharNumber: aadharNumber,
+        carNumber: carNumber,
+        rcNumber: rcNumber,
+        dlNumber: dlNumber
+      }, 'mock-bypass');
+      
+      if (res.status === 200 && res.data.success && res.data.data) {
+        const data = res.data.data;
+        showToast("Account created successfully!", "success");
+        
+        if (role === 'customer') {
+          state.customerToken = data.accessToken;
+          state.customerId = data.user.id;
+          state.customerName = data.user.fullName || 'John Customer';
+          state.customerOtp = data.user.rideOtp || '1234';
+          state.customerAadhar = data.user.aadharNumber || '';
+          state.customerCarNumber = data.user.carNumber || '';
+          state.customerRcNumber = data.user.rcNumber || '';
+          renderCustomerScreen('home');
+          if (side === 'driver') {
+            renderDriverScreen('login');
+          }
+        } else {
+          state.driverToken = data.accessToken;
+          state.driverUserId = data.user.id;
+          state.driverName = data.user.fullName || 'Ravi Kumar';
+          state.driverPhone = phoneInput;
+          state.driverAadhar = data.user.aadharNumber || '';
+          state.driverDlNumber = data.user.dlNumber || '';
+          
+          showToast("Setting up driver profile...", "info");
+          const profileRes = await executeApiRequest('PATCH', '/functions/v1/drivers-profile', {
+            pricePerTrip: 400,
+            licenseNumber: dlNumber || `DL-${Math.floor(100000 + Math.random() * 900000)}`,
+            experienceYears: 5,
+            languages: ["Hindi", "English"],
+            serviceLocal: true,
+            serviceOutstation: true,
+            serviceAirport: true
+          }, state.driverToken);
+          
+          if (profileRes.status === 200 && profileRes.data.success) {
+            state.driverProfileId = profileRes.data.data.id;
+            await executeApiRequest('POST', '/functions/v1/drivers-availability', { isAvailable: true }, state.driverToken);
+            syncDriverGPS(state.driverLat, state.driverLng, true);
+          }
+          
+          renderDriverScreen('home');
+          if (side === 'customer') {
+            renderCustomerScreen('login');
+          }
+        }
+      } else {
+        showToast("Registration failed", "error");
+      }
+    }
+
+  </script>
+  <div id="recaptcha-container"></div>
+</body>
+</html>
