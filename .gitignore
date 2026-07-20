@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies (defensive — real ones live inside the submodules)
+node_modules/
+
+# Build artifacts / binaries
+*.apk
+*.aab
+*.ipa
+*.log
+
+# Local-only Claude settings (machine-specific permission allowlist)
+.claude/settings.local.json
