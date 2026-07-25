@@ -1,0 +1,74 @@
+project_id = "drivemate"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[realtime]
+enabled = true
+
+[functions]
+[functions.health]
+verify_jwt = false
+[functions.auth-session]
+verify_jwt = false
+[functions.auth-me]
+verify_jwt = false
+[functions.auth-refresh]
+verify_jwt = false
+[functions.auth-logout]
+verify_jwt = false
+[functions.users-fcm-token]
+verify_jwt = false
+[functions.users-profile]
+verify_jwt = false
+[functions.vehicles-upsert]
+verify_jwt = false
+[functions.drivers-nearby]
+verify_jwt = false
+[functions.drivers-profile]
+verify_jwt = false
+[functions.drivers-availability]
+verify_jwt = false
+[functions.drivers-location]
+verify_jwt = false
+[functions.drivers-earnings]
+verify_jwt = false
+[functions.bookings-create]
+verify_jwt = false
+[functions.bookings-get]
+verify_jwt = false
+[functions.bookings-history]
+verify_jwt = false
+[functions.bookings-cancel]
+verify_jwt = false
+[functions.bookings-accept]
+verify_jwt = false
+[functions.bookings-decline]
+verify_jwt = false
+[functions.bookings-arrived]
+verify_jwt = false
+[functions.bookings-start]
+verify_jwt = false
+[functions.bookings-complete]
+verify_jwt = false
+[functions.payments-mark-cod-collected]
+verify_jwt = false
+[functions.payments-get-by-booking]
+verify_jwt = false
+[functions.payments-create-order]
+verify_jwt = false
+[functions.payments-verify]
+verify_jwt = false
+[functions.payments-webhook]
+verify_jwt = false
+[functions.reviews-create]
+verify_jwt = false
+[functions.reviews-by-driver]
+verify_jwt = false

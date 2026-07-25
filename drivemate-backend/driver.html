@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriveMate - Driver App</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #161c2a;
+      --bg-tertiary: #1f293d;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --accent: #10b981; /* Green theme for driver */
+      --accent-hover: #059669;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --border: #2d3748;
+      --radius: 16px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 10px;
+    }
+
+    .mobile-frame {
+      width: 100%;
+      max-width: 450px;
+      height: 94vh;
+      min-height: 640px;
+      background-color: var(--bg-secondary);
+      border: 4px solid var(--border);
+      border-radius: 32px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    header {
+      padding: 16px 20px;
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.25rem;
+      background: linear-gradient(135deg, #10b981, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .status-online { background-color: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .status-offline { background-color: rgba(239, 68, 68, 0.15); color: var(--error); }
+
+    .content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 18px;
+      gap: 16px;
+    }
+
+    .map-container {
+      height: 180px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    #map { height: 100%; width: 100%; }
+
+    .card {
+      background-color: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; }
+    input, textarea, select {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+
+    .btn {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn:hover { background-color: var(--accent-hover); }
+    .btn-success { background-color: var(--success); }
+    .btn-error { background-color: var(--error); }
+    .btn-secondary { background-color: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+
+    /* Switch toggle */
+    .switch-container { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--bg-primary); border: 1px solid var(--border);
+      transition: .4s; border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+      background-color: white; transition: .4s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--success); }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    .hidden { display: none !important; }
+
+    /* Star rating */
+    .star-rating { display: flex; gap: 8px; font-size: 1.5rem; justify-content: center; }
+    .star { cursor: pointer; color: var(--text-secondary); }
+    .star.selected { color: var(--warning); }
+
+    /* Toast */
+    .toast {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background-color: var(--bg-tertiary);
+      border-left: 4px solid var(--accent);
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      z-index: 2000;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toast-error { border-left-color: var(--error); }
+    .toast-success { border-left-color: var(--success); }
+  </style>
+</head>
+<body>
+
+  <div class="mobile-frame">
+    <header>
+      <div class="logo">DriveMate Driver</div>
+      <span class="status-badge status-offline" id="lbl-status">OFFLINE</span>
+    </header>
+
+    <div class="content-area">
+      <!-- 1. Authentication -->
+      <div class="card" id="auth-card">
+        <h3 style="font-family: 'Outfit';">Driver Sign In</h3>
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">Enter your phone number below to receive a secure SMS verification code.</p>
+        
+        <div class="form-group" style="margin-top: 4px;">
+          <label>Mobile Number (Include Country Code)</label>
+          <input type="tel" id="txt-phone" placeholder="+919999999997" value="+919999999997">
+        </div>
+        
+        <!-- Recaptcha Container for Firebase SDK -->
+        <div id="recaptcha-container" style="margin-top: 8px;"></div>
+        
+        <button class="btn" id="btn-send-otp">Request SMS Verification Code</button>
+
+        <div class="form-group hidden" id="otp-group" style="margin-top: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
+          <label>Enter Verification Code</label>
+          <input type="text" id="txt-otp" placeholder="123456">
+          <button class="btn btn-success" style="margin-top: 8px;" id="btn-verify-otp">Verify OTP & Login</button>
+        </div>
+      </div>
+
+      <!-- 2. Onboarding (For New Driver) -->
+      <div class="card hidden" id="onboarding-card">
+        <h3 style="font-family: 'Outfit';">Complete Driver Registration</h3>
+        <div class="form-group">
+          <label>Driver Full Name</label>
+          <input type="text" id="reg-name" placeholder="Ravi Kumar">
+        </div>
+        <div class="form-group">
+          <label>Date of Birth</label>
+          <input type="date" id="reg-dob">
+        </div>
+        <div class="form-group">
+          <label>Aadhar Card Number</label>
+          <input type="text" id="reg-aadhar" placeholder="1234 5678 9012">
+        </div>
+        <div class="form-group">
+          <label>Driving License (DL)</label>
+          <input type="text" id="reg-dl" placeholder="DL-999999">
+        </div>
+        <button class="btn btn-success" id="btn-complete-onboarding">Submit Driver Registration</button>
+      </div>
+
+      <!-- 3. Dashboard -->
+      <div class="hidden" id="dashboard" style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Status and Profile -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: bold; font-size: 1.05rem;" id="lbl-profile-name">---</div>
+              <div id="lbl-profile-rating" style="font-size: 0.8rem; color: var(--text-secondary);">Rating: ⭐ ---</div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+              <span class="status-badge status-offline" id="lbl-online-status">OFFLINE</span>
+              <div class="switch-container">
+                <label class="switch">
+                  <input type="checkbox" id="chk-online">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Address Search & Locate Row -->
+        <div class="card" style="padding: 10px; gap: 8px; border-color: var(--border);">
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="txt-map-search" placeholder="Type location (e.g. Lucknow)..." style="flex: 1; padding: 8px; font-size: 0.85rem;">
+            <button class="btn btn-secondary" id="btn-map-search" style="padding: 8px 12px; font-size: 0.85rem;">Search</button>
+          </div>
+          <button class="btn btn-secondary" id="btn-current-loc" style="padding: 6px; font-size: 0.8rem; border-color: var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; gap: 6px;">
+            📍 Use Current Location
+          </button>
+        </div>
+
+        <!-- Map Section -->
+        <div class="map-container">
+          <div id="map"></div>
+        </div>
+
+        <!-- Location Telemetry Simulator -->
+        <div class="card">
+          <h4 style="font-family: 'Outfit';">Simulate Location Coords</h4>
+          <p style="font-size: 0.8rem; color: var(--text-secondary);">Double-click on the map or drag marker to update coords.</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="form-group">
+              <label>Latitude</label>
+              <input type="number" step="0.00001" id="txt-lat" value="26.4499">
+            </div>
+            <div class="form-group">
+              <label>Longitude</label>
+              <input type="number" step="0.00001" id="txt-lng" value="80.3319">
+            </div>
+          </div>
+          <button class="btn btn-secondary" id="btn-update-location" style="padding: 6px;">Send Coords</button>
+        </div>
+
+        <!-- Incoming Request Alert -->
+        <div class="card hidden" id="ride-request-card" style="border-color: var(--warning); background-color: rgba(245,158,11,0.05);">
+          <h4 style="font-family: 'Outfit'; color: var(--warning);">Incoming Job Request!</h4>
+          <div style="font-size: 0.85rem; padding: 6px; background-color: var(--bg-primary); border-radius: 8px;">
+            <div id="lbl-req-pickup">Pickup Coords: ---</div>
+            <div id="lbl-req-drop">Drop Coords: ---</div>
+            <div style="font-weight: bold; margin-top: 4px;" id="lbl-req-fare">Fare: ₹---</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <button class="btn btn-success" id="btn-accept">Accept Job</button>
+            <button class="btn btn-error" id="btn-decline">Decline</button>
+          </div>
+        </div>
+
+        <!-- Active Trip Panel -->
+        <div class="card hidden" id="job-active-card">
+          <div style="display: flex; justify-content: space-between;">
+            <h4 style="font-family: 'Outfit';">Active Job</h4>
+            <span class="status-badge status-online" id="lbl-job-status">ACCEPTED</span>
+          </div>
+          <div style="padding: 8px; background-color: var(--bg-primary); border-radius: 8px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px;">
+            <div id="lbl-job-customer">Customer: Active</div>
+            <div id="lbl-job-pickup">Pickup Coords: ---</div>
+            <div id="lbl-job-drop">Drop Coords: ---</div>
+            <div style="font-weight: bold;" id="lbl-job-amount">Amount: ₹---</div>
+          </div>
+
+          <!-- OTP Form -->
+          <div class="form-group hidden" id="job-otp-group" style="border-top: 1px solid var(--border); padding-top: 8px;">
+            <label>Customer OTP Code</label>
+            <input type="text" id="txt-start-otp" placeholder="1234">
+          </div>
+
+          <!-- Cash payment -->
+          <div class="card hidden" id="cash-payment-card" style="background-color: rgba(16, 185, 129, 0.15); border-color: var(--success); padding: 8px;">
+            <div style="font-weight: bold; font-size: 0.85rem; color: var(--success);">Collect Cash payment:</div>
+            <div style="font-size: 1.1rem; font-weight: bold;" id="lbl-cash-amount">₹---</div>
+          </div>
+
+          <button class="btn" id="btn-job-action">Arrived at Pickup</button>
+        </div>
+
+        <!-- Review Customer Screen -->
+        <div class="card hidden" id="review-card">
+          <h4 style="font-family: 'Outfit';">Rate Customer</h4>
+          <p style="font-size: 0.85rem;">Rate your experience with the passenger:</p>
+          <div class="star-rating" id="review-stars">
+            <span class="star" data-val="1">★</span>
+            <span class="star" data-val="2">★</span>
+            <span class="star" data-val="3">★</span>
+            <span class="star" data-val="4">★</span>
+            <span class="star" data-val="5">★</span>
+          </div>
+          <textarea id="txt-comment" placeholder="Leave comments..." rows="2"></textarea>
+          <button class="btn btn-success" id="btn-submit-review">Submit Rating</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-el" class="toast hidden">
+    <span id="toast-text">Message</span>
+    <span style="cursor:pointer;" onclick="hideToast()">&times;</span>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Firebase SDK Modules -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const HOST_API = window.location.origin + "/functions/v1";
+    let token = localStorage.getItem('driverToken');
+    let userObj = null;
+    let map, driverMarker;
+    let driverCoords = { lat: 26.4499, lng: 80.3319 };
+    let activeBooking = null;
+    let pollId = null;
+    let reviewRating = 0;
+
+    // Firebase state
+    let firebaseApp = null;
+    let firebaseAuth = null;
+    let confirmationResult = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      setupEvents();
+      loadFirebaseConfig();
+      if (token) {
+        fetchProfile();
+      }
+    });
+
+    function showToast(text, isError = false) {
+      const toast = document.getElementById('toast-el');
+      toast.className = `toast ${isError ? 'toast-error' : 'toast-success'}`;
+      document.getElementById('toast-text').innerText = text;
+      toast.classList.remove('hidden');
+      setTimeout(hideToast, 5000);
+    }
+    window.hideToast = () => { document.getElementById('toast-el').classList.add('hidden'); }
+
+    // Firebase Config Logic
+    async function loadFirebaseConfig() {
+      try {
+        const res = await fetch(`${HOST_API}/firebase-config`);
+        const wrapper = await res.json();
+        if (res.ok && wrapper && wrapper.success && wrapper.data && wrapper.data.apiKey) {
+          console.log("Loaded Firebase Web config dynamically from backend!");
+          tryInitFirebase(wrapper.data);
+        } else {
+          showToast("Firebase Config not configured on backend .env", true);
+        }
+      } catch (err) {
+        showToast("Failed to fetch Firebase Config from Deno", true);
+        console.error(err);
+      }
+    }
+
+    function tryInitFirebase(config) {
+      try {
+        firebaseApp = initializeApp(config);
+        firebaseAuth = getAuth(firebaseApp);
+        console.log("Firebase client SDK initialized successfully.");
+      } catch (err) {
+        console.error("Firebase init failed:", err);
+        showToast("Invalid Firebase Configuration: Check console", true);
+      }
+    }
+
+    function setupEvents() {
+      document.getElementById('btn-send-otp').addEventListener('click', sendVerificationCode);
+      document.getElementById('btn-verify-otp').addEventListener('click', verifyCode);
+      document.getElementById('btn-complete-onboarding').addEventListener('click', completeOnboarding);
+      document.getElementById('chk-online').addEventListener('change', toggleOnline);
+      document.getElementById('btn-update-location').addEventListener('click', () => sendLocationUpdate(null));
+      document.getElementById('btn-accept').addEventListener('click', acceptRide);
+      document.getElementById('btn-decline').addEventListener('click', declineRide);
+      document.getElementById('btn-job-action').addEventListener('click', advanceJobState);
+      document.getElementById('btn-submit-review').addEventListener('click', submitReview);
+
+      // Location utility buttons
+      document.getElementById('btn-map-search').addEventListener('click', searchAddress);
+      document.getElementById('btn-current-loc').addEventListener('click', useCurrentLocation);
+
+      // Stars
+      const stars = document.querySelectorAll('#review-stars .star');
+      stars.forEach(s => {
+        s.addEventListener('click', (e) => {
+          reviewRating = parseInt(e.target.dataset.val);
+          stars.forEach(st => {
+            st.classList.toggle('selected', parseInt(st.dataset.val) <= reviewRating);
+          });
+        });
+      });
+    }
+
+    // Geocoding and geolocation functions
+    async function searchAddress() {
+      const query = document.getElementById('txt-map-search').value.trim();
+      if (!query) {
+        showToast("Enter address to search", true);
+        return;
+      }
+      showToast("Searching address...", false);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (data.length === 0) {
+          showToast("Address not found", true);
+          return;
+        }
+        const first = data[0];
+        const lat = parseFloat(first.lat);
+        const lon = parseFloat(first.lon);
+        
+        driverCoords = { lat, lon };
+        map.setView([lat, lon], 14);
+        driverMarker.setLatLng([lat, lon]);
+        
+        document.getElementById('txt-lat').value = lat.toFixed(5);
+        document.getElementById('txt-lng').value = lon.toFixed(5);
+        
+        showToast(`Location set to: ${first.display_name}`);
+        if (document.getElementById('chk-online').checked) {
+          sendLocationUpdate();
+        }
+      } catch (err) {
+        showToast("Search failed: " + err.message, true);
+      }
+    }
+
+    function useCurrentLocation() {
+      if (!navigator.geolocation) {
+        showToast("Geolocation is not supported by your browser", true);
+        return;
+      }
+      showToast("Fetching current location...", false);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          
+          driverCoords = { lat, lng: lon };
+          map.setView([lat, lon], 15);
+          driverMarker.setLatLng([lat, lon]);
+          
+          document.getElementById('txt-lat').value = lat.toFixed(5);
+          document.getElementById('txt-lng').value = lon.toFixed(5);
+          
+          showToast("Driver location updated to your GPS coordinates!");
+          if (document.getElementById('chk-online').checked) {
+            sendLocationUpdate();
+          }
+        },
+        (error) => {
+          showToast("Geolocation error: " + error.message, true);
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    // AUTH ACTIONS
+    async function sendVerificationCode() {
+      const phone = document.getElementById('txt-phone').value.trim();
+
+      if (!phone) {
+        showToast("Enter a valid phone number", true);
+        return;
+      }
+
+      if (!firebaseAuth) {
+        showToast("Firebase Auth client SDK has not loaded yet. Check backend .env configuration.", true);
+        return;
+      }
+
+      showToast("Initializing Recaptcha verifier...", false);
+      try {
+        document.getElementById('recaptcha-container').innerHTML = '<div id="interactive-recaptcha"></div>';
+        
+        window.recaptchaVerifier = new RecaptchaVerifier(firebaseAuth, 'interactive-recaptcha', {
+          size: 'normal',
+          callback: () => {
+            console.log("Recaptcha verified!");
+          }
+        });
+
+        const result = await signInWithPhoneNumber(firebaseAuth, phone, window.recaptchaVerifier);
+        confirmationResult = result;
+        
+        document.getElementById('otp-group').classList.remove('hidden');
+        showToast("Real SMS verification code dispatched to your phone!", false);
+      } catch (err) {
+        showToast("Firebase Auth Dispatch Error: " + err.message, true);
+        console.error(err);
+      }
+    }
+
+    async function verifyCode() {
+      const code = document.getElementById('txt-otp').value.trim();
+
+      if (!code) {
+        showToast("Please enter the verification code", true);
+        return;
+      }
+
+      try {
+        if (!confirmationResult) {
+          showToast("Verify flow broken: Request OTP again", true);
+          return;
+        }
+        showToast("Verifying code against Firebase...", false);
+        const userCred = await confirmationResult.confirm(code);
+        const firebaseToken = await userCred.user.getIdToken();
+
+        showToast("Verifying Firebase ID Token on Backend...", false);
+        const res = await fetch(`${HOST_API}/auth-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ firebaseIdToken: firebaseToken })
+        });
+        const wrapper = await res.json();
+        
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Backend rejected token");
+
+        const data = wrapper.data;
+        if (data.isNewUser) {
+          userObj = { phone: data.phone, firebaseUid: data.firebaseUid };
+          document.getElementById('auth-card').classList.add('hidden');
+          document.getElementById('onboarding-card').classList.remove('hidden');
+          showToast("Phone verified! Fill onboarding profile.", false);
+        } else {
+          token = data.accessToken;
+          localStorage.setItem('driverToken', token);
+          showToast("Logged in successfully!", false);
+          fetchProfile();
+        }
+      } catch (err) {
+        showToast(err.message, true);
+        console.error(err);
+      }
+    }
+
+    async function completeOnboarding() {
+      const name = document.getElementById('reg-name').value.trim();
+      const dob = document.getElementById('reg-dob').value;
+      const aadhar = document.getElementById('reg-aadhar').value.trim();
+      const dl = document.getElementById('reg-dl').value.trim();
+
+      if (!name || !dob || !aadhar || !dl) {
+        showToast("Fill in all profile fields", true);
+        return;
+      }
+
+      try {
+        const firebaseToken = await firebaseAuth.currentUser.getIdToken();
+        
+        const res = await fetch(`${HOST_API}/auth-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firebaseIdToken: firebaseToken,
+            role: 'driver',
+            fullName: name,
+            dob, aadharNumber: aadhar, dlNumber: dl
+          })
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Onboarding failed");
+
+        token = wrapper.data.accessToken;
+        localStorage.setItem('driverToken', token);
+        document.getElementById('onboarding-card').classList.add('hidden');
+        showToast("Driver profile created!", false);
+        fetchProfile();
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    function initMap() {
+      map = L.map('map').setView([driverCoords.lat, driverCoords.lng], 13);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+      driverMarker = L.marker([driverCoords.lat, driverCoords.lng], { draggable: true }).addTo(map);
+      driverMarker.bindPopup("Your Location (Drag to Move)").openPopup();
+
+      driverMarker.on('dragend', () => {
+        const pos = driverMarker.getLatLng();
+        driverCoords = { lat: pos.lat, lng: pos.lng };
+        document.getElementById('txt-lat').value = pos.lat.toFixed(5);
+        document.getElementById('txt-lng').value = pos.lng.toFixed(5);
+        if (document.getElementById('chk-online').checked) {
+          sendLocationUpdate();
+        }
+      });
+
+      map.on('dblclick', (e) => {
+        driverCoords = e.latlng;
+        driverMarker.setLatLng(driverCoords);
+        document.getElementById('txt-lat').value = driverCoords.lat.toFixed(5);
+        document.getElementById('txt-lng').value = driverCoords.lng.toFixed(5);
+        if (document.getElementById('chk-online').checked) {
+          sendLocationUpdate();
+        }
+      });
+    }
+
+    async function fetchProfile() {
+      if (!token || token === "null" || token === "undefined") {
+        localStorage.removeItem('driverToken');
+        token = null;
+        document.getElementById('auth-card').classList.remove('hidden');
+        document.getElementById('dashboard').classList.add('hidden');
+        return;
+      }
+      try {
+        const res = await fetch(`${HOST_API}/auth-me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) {
+          localStorage.removeItem('driverToken');
+          token = null;
+          document.getElementById('auth-card').classList.remove('hidden');
+          document.getElementById('dashboard').classList.add('hidden');
+          return;
+        }
+
+        const data = wrapper.data;
+        userObj = data;
+        document.getElementById('lbl-status').innerText = "ACTIVE";
+        document.getElementById('lbl-status').className = "status-badge status-online";
+        document.getElementById('auth-card').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+
+        document.getElementById('lbl-profile-name').innerText = data.fullName;
+        
+        const ratingVal = data.driverProfile ? data.driverProfile.rating : 5.0;
+        const totalTripsVal = data.driverProfile ? data.driverProfile.totalTrips : 0;
+        document.getElementById('lbl-profile-rating').innerText = `Rating: ⭐ ${ratingVal} (${totalTripsVal} trips)`;
+
+        if (data.driverProfile) {
+          const isOnline = data.driverProfile.isAvailable;
+          document.getElementById('chk-online').checked = isOnline;
+          updateOnlineStatusLabel(isOnline);
+        }
+
+        startPoller();
+      } catch (err) { console.error("fetchProfile err", err); }
+    }
+
+    function updateOnlineStatusLabel(isOnline) {
+      const label = document.getElementById('lbl-online-status');
+      label.innerText = isOnline ? "ONLINE" : "OFFLINE";
+      label.className = `status-badge ${isOnline ? 'status-online' : 'status-offline'}`;
+    }
+
+    async function toggleOnline(e) {
+      const isOnline = e.target.checked;
+      try {
+        const resAvail = await fetch(`${HOST_API}/drivers-availability`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ isAvailable: isOnline })
+        });
+        const wrapperAvail = await resAvail.json();
+        if (!resAvail.ok || !wrapperAvail.success) throw new Error(wrapperAvail.error?.message || "Failed to update availability");
+
+        await sendLocationUpdate(isOnline);
+        updateOnlineStatusLabel(isOnline);
+        showToast(isOnline ? "You are ONLINE" : "You are OFFLINE");
+      } catch (err) {
+        showToast(err.message, true);
+        e.target.checked = !isOnline;
+      }
+    }
+
+    async function sendLocationUpdate(isOnlineFlag = null) {
+      const lat = parseFloat(document.getElementById('txt-lat').value);
+      const lng = parseFloat(document.getElementById('txt-lng').value);
+      const isOnline = isOnlineFlag !== null ? isOnlineFlag : document.getElementById('chk-online').checked;
+
+      try {
+        const res = await fetch(`${HOST_API}/drivers-location`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ latitude: lat, longitude: lng, isOnline })
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Failed to update location");
+
+        driverCoords = { lat, lng };
+        driverMarker.setLatLng([lat, lng]);
+        showToast("Location updated on server!");
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    function updateDriverJobUI(booking) {
+      if (booking.status === 'pending') {
+        document.getElementById('ride-request-card').classList.remove('hidden');
+        document.getElementById('job-active-card').classList.add('hidden');
+        
+        document.getElementById('lbl-req-pickup').innerText = `Pickup: Lat ${booking.pickupLatitude.toFixed(4)}, Lng ${booking.pickupLongitude.toFixed(4)}`;
+        document.getElementById('lbl-req-drop').innerText = `Drop: Lat ${booking.dropLatitude.toFixed(4)}, Lng ${booking.dropLongitude.toFixed(4)}`;
+        document.getElementById('lbl-req-fare').innerText = `Fare: ₹${booking.totalAmount}`;
+      } else {
+        document.getElementById('ride-request-card').classList.add('hidden');
+        const card = document.getElementById('job-active-card');
+        card.classList.remove('hidden');
+
+        document.getElementById('lbl-job-status').innerText = booking.status.toUpperCase();
+        document.getElementById('lbl-job-pickup').innerText = `Pickup Lat: ${booking.pickupLatitude.toFixed(4)}`;
+        document.getElementById('lbl-job-drop').innerText = `Drop Lat: ${booking.dropLatitude.toFixed(4)}`;
+        document.getElementById('lbl-job-amount').innerText = `Amount: ₹${booking.totalAmount}`;
+
+        const actionBtn = document.getElementById('btn-job-action');
+        const otpGroup = document.getElementById('job-otp-group');
+        const cashCard = document.getElementById('cash-payment-card');
+
+        otpGroup.classList.add('hidden');
+        cashCard.classList.add('hidden');
+
+        if (booking.status === 'driver_accepted') {
+          actionBtn.innerText = "Arrived at Pickup";
+          actionBtn.className = "btn";
+        } else if (booking.status === 'arrived') {
+          actionBtn.innerText = "Start Trip (Enter OTP)";
+          actionBtn.className = "btn btn-success";
+          otpGroup.classList.remove('hidden');
+        } else if (booking.status === 'started') {
+          actionBtn.innerText = "Complete Ride";
+          actionBtn.className = "btn btn-error";
+        } else if (booking.status === 'completed' && booking.paymentStatus === 'cod_due') {
+          actionBtn.innerText = "Confirm Payment Collected";
+          actionBtn.className = "btn btn-success";
+          cashCard.classList.remove('hidden');
+          document.getElementById('lbl-cash-amount').innerText = `₹${booking.totalAmount}`;
+        } else if (booking.status === 'completed' && booking.paymentStatus === 'cod_collected') {
+          card.classList.add('hidden');
+          document.getElementById('review-card').classList.remove('hidden');
+        }
+      }
+    }
+
+    async function acceptRide() {
+      if (!activeBooking) return;
+      try {
+        const res = await fetch(`${HOST_API}/bookings-accept`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ bookingId: activeBooking.id })
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Accept failed");
+        showToast("Ride accepted successfully!");
+        activeBooking = wrapper.data;
+        updateDriverJobUI(wrapper.data);
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    async function declineRide() {
+      if (!activeBooking) return;
+      try {
+        const res = await fetch(`${HOST_API}/bookings-decline`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ bookingId: activeBooking.id })
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Decline failed");
+        showToast("Ride declined.");
+        activeBooking = null;
+        document.getElementById('ride-request-card').classList.add('hidden');
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    async function advanceJobState() {
+      if (!activeBooking) return;
+      const status = activeBooking.status;
+
+      try {
+        if (status === 'driver_accepted') {
+          const res = await fetch(`${HOST_API}/bookings-arrived`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ bookingId: activeBooking.id })
+          });
+          const wrapper = await res.json();
+          if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Failed to mark Arrived");
+          activeBooking = wrapper.data;
+          updateDriverJobUI(wrapper.data);
+        }
+        else if (status === 'arrived') {
+          const otp = document.getElementById('txt-start-otp').value.trim();
+          if (!otp) {
+            showToast("Enter passenger ride OTP", true);
+            return;
+          }
+          const res = await fetch(`${HOST_API}/bookings-start`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ bookingId: activeBooking.id, otp })
+          });
+          const wrapper = await res.json();
+          if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Failed to start trip");
+          activeBooking = wrapper.data;
+          updateDriverJobUI(wrapper.data);
+        }
+        else if (status === 'started') {
+          const res = await fetch(`${HOST_API}/bookings-complete`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ bookingId: activeBooking.id })
+          });
+          const wrapper = await res.json();
+          if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Failed to complete trip");
+          activeBooking = wrapper.data;
+          updateDriverJobUI(wrapper.data);
+        }
+        else if (status === 'completed' && activeBooking.paymentStatus === 'cod_due') {
+          const res = await fetch(`${HOST_API}/payments-mark-cod-collected`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ bookingId: activeBooking.id })
+          });
+          const wrapper = await res.json();
+          if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Failed to collect payment");
+          activeBooking = wrapper.data;
+          updateDriverJobUI(wrapper.data);
+        }
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    async function submitReview() {
+      if (reviewRating === 0) {
+        showToast("Select rating stars", true);
+        return;
+      }
+      const comment = document.getElementById('txt-comment').value.trim();
+      try {
+        const res = await fetch(`${HOST_API}/reviews-create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            bookingId: activeBooking.id,
+            rating: reviewRating,
+            comment
+          })
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Rating failed");
+        showToast("Passenger rated successfully!");
+        document.getElementById('review-card').classList.add('hidden');
+        activeBooking = null;
+        fetchProfile();
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    function startPoller() {
+      if (pollId) clearInterval(pollId);
+      pollId = setInterval(async () => {
+        if (!token) return;
+        try {
+          const res = await fetch(`${HOST_API}/bookings-history`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const wrapper = await res.json();
+          if (res.ok && wrapper.success) {
+            const bookings = wrapper.data.bookings || [];
+            const active = bookings.find(b => ['pending', 'driver_accepted', 'arrived', 'started', 'completed'].includes(b.status));
+            
+            if (active) {
+              const detRes = await fetch(`${HOST_API}/bookings-get?bookingId=${active.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              const detWrapper = await detRes.json();
+              if (detRes.ok && detWrapper.success) {
+                activeBooking = detWrapper.data;
+                updateDriverJobUI(detWrapper.data);
+              }
+            } else if (activeBooking) {
+              activeBooking = null;
+              document.getElementById('ride-request-card').classList.add('hidden');
+              document.getElementById('job-active-card').classList.add('hidden');
+              document.getElementById('review-card').classList.add('hidden');
+            }
+          }
+        } catch (e) {}
+      }, 4000);
+    }
+  </script>
+</body>
+</html>

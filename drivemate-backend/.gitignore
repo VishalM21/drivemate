@@ -1,0 +1,20 @@
+# Environment files
+.env
+.env.*
+supabase/functions/.env
+
+# Firebase service account (contains a private key — never commit)
+drivemate-*-firebase-adminsdk-*.json
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
+
+# macOS
+.DS_Store
+
+# Deno
+.deno/
+
+# Logs
+*.log

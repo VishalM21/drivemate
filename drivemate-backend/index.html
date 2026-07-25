@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriveMate Developer Test Center</title>
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS for Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Vanilla CSS Design System -->
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #161c2a;
+      --bg-tertiary: #1f293d;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --border: #2d3748;
+      --radius: 12px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, h5 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+    }
+
+    /* App Layout */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Panels */
+    .panel {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .panel-title {
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* Map Area */
+    .map-section {
+      position: relative;
+      height: 100%;
+      background-color: var(--bg-tertiary);
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
+      background-color: #1a202c;
+    }
+
+    /* Control forms & Card elements */
+    .card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      border-color: #4b5563;
+      transform: translateY(-2px);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input, select, textarea {
+      background-color: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: var(--transition);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .btn {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: var(--transition);
+    }
+
+    .btn:hover {
+      background-color: var(--accent-hover);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-success {
+      background-color: var(--success);
+    }
+    .btn-success:hover {
+      background-color: #059669;
+    }
+
+    .btn-error {
+      background-color: var(--error);
+    }
+    .btn-error:hover {
+      background-color: #dc2626;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+    .btn-secondary:hover {
+      background-color: var(--bg-tertiary);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Switch Config */
+    .switch-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      transition: .4s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--success);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Badge indicators */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .status-online { background-color: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .status-offline { background-color: rgba(239, 68, 68, 0.15); color: var(--error); }
+    .status-pending { background-color: rgba(245, 158, 11, 0.15); color: var(--warning); }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4b5563;
+    }
+
+    /* Split views */
+    .onboarding-screen, .booking-screen, .reviews-screen {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10000;
+    }
+
+    .toast {
+      background-color: var(--bg-secondary);
+      border-left: 4px solid var(--accent);
+      border-radius: 4px;
+      padding: 12px 18px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      min-width: 300px;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .toast-info { border-left-color: var(--accent); }
+    .toast-success { border-left-color: var(--success); }
+    .toast-warning { border-left-color: var(--warning); }
+    .toast-error { border-left-color: var(--error); }
+
+    .toast-close {
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-weight: bold;
+    }
+
+    /* Rating stars */
+    .star-rating {
+      display: flex;
+      gap: 6px;
+      font-size: 1.5rem;
+    }
+
+    .star {
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+
+    .star:hover, .star.selected {
+      color: var(--warning);
+    }
+
+    /* Floating map tools */
+    .map-overlay-card {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background-color: rgba(22, 28, 42, 0.95);
+      backdrop-filter: blur(10px);
+      width: 280px;
+    }
+
+    .driver-list-item {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .driver-list-item:hover {
+      background-color: var(--bg-tertiary);
+    }
+
+    .section-title {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <div class="logo-container">
+        <div class="logo-badge">DriveMate</div>
+        <span style="font-size: 0.85rem; color: var(--text-secondary);">Simulator Console</span>
+      </div>
+      <div class="switch-container">
+        <label for="mock-auth-toggle">Mock Auth Mode</label>
+        <label class="switch">
+          <input type="checkbox" id="mock-auth-toggle" checked>
+          <span class="slider"></span>
+        </label>
+        <span id="auth-mode-label" style="font-size: 0.85rem; font-weight: 600; color: var(--success);">LOCAL BYPASS</span>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <!-- LEFT SIDE: Customer Panel -->
+      <div class="panel" id="customer-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Customer App</h2>
+            <div class="panel-subtitle">Request rides, view fares & rate drivers</div>
+          </div>
+          <div id="customer-status-container">
+            <span class="status-badge status-offline">NOT LOGGED IN</span>
+          </div>
+        </div>
+
+        <!-- Auth Section -->
+        <div class="card" id="customer-auth-card">
+          <div class="section-title">Step 1: Authenticate</div>
+          <div class="form-group">
+            <label>Mobile Number</label>
+            <input type="tel" id="customer-phone" placeholder="9999999999" value="9999999999">
+          </div>
+          <div id="customer-recaptcha-container"></div>
+          <button class="btn" id="btn-customer-send-otp">Send OTP</button>
+          
+          <div class="form-group hidden" id="customer-otp-group">
+            <label>Enter 6-Digit OTP</label>
+            <input type="text" id="customer-otp" placeholder="123456" value="123456">
+            <button class="btn btn-success" style="margin-top: 10px;" id="btn-customer-verify-otp">Verify & Sign In</button>
+          </div>
+        </div>
+
+        <!-- Onboarding Form (Customer) -->
+        <div class="card hidden" id="customer-onboarding-card">
+          <div class="section-title">New User Profile Onboarding</div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="customer-reg-name" placeholder="John Doe">
+          </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="customer-reg-dob">
+          </div>
+          <div class="form-group">
+            <label>Car Name / Model</label>
+            <input type="text" id="customer-reg-car-name" placeholder="Honda City">
+          </div>
+          <div class="form-group">
+            <label>Car RC Name / Number</label>
+            <input type="text" id="customer-reg-car-rc" placeholder="RC-12345678">
+          </div>
+          <button class="btn btn-success" id="btn-customer-complete-onboarding">Create Account</button>
+        </div>
+
+        <!-- Main Dashboard View -->
+        <div class="hidden" id="customer-dashboard" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Profile update section -->
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div class="section-title">Your Profile</div>
+              <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" id="btn-customer-edit-toggle">Edit Profile</button>
+            </div>
+            <div id="customer-profile-info">
+              <div style="font-weight: 600; font-size: 1.1rem;" id="lbl-customer-name">---</div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary);" id="lbl-customer-phone">---</div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary);" id="lbl-customer-rating">Rating: ⭐ ---</div>
+              <div style="margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px;">
+                <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Car Details:</div>
+                <div style="font-weight: 500;" id="lbl-customer-car">---</div>
+                <div style="font-size: 0.8rem;" id="lbl-customer-rc">---</div>
+              </div>
+            </div>
+            <div class="hidden" id="customer-profile-edit-form" style="display: flex; flex-direction: column; gap: 10px;">
+              <div class="form-group">
+                <label>Car Name / Model</label>
+                <input type="text" id="customer-edit-car-name">
+              </div>
+              <div class="form-group">
+                <label>Car RC Name</label>
+                <input type="text" id="customer-edit-car-rc">
+              </div>
+              <button class="btn btn-success btn-secondary" id="btn-customer-save-profile">Save Car Details</button>
+            </div>
+          </div>
+
+          <!-- Ride Booking Card -->
+          <div class="card">
+            <div class="section-title">Book a Ride</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">
+              💡 <em>Click anywhere on the map to set Pickup, then double-click (or click again) to set Drop-off.</em>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label>Pickup Lat/Lng</label>
+                <input type="text" id="txt-pickup-coord" placeholder="Click Map" readonly>
+              </div>
+              <div class="form-group">
+                <label>Drop Lat/Lng</label>
+                <input type="text" id="txt-drop-coord" placeholder="Click Map" readonly>
+              </div>
+            </div>
+            <button class="btn" id="btn-customer-search-drivers">Search Nearby Drivers</button>
+
+            <!-- Search Results -->
+            <div class="hidden" id="search-results-section" style="margin-top: 10px; max-height: 250px; overflow-y: auto;">
+              <div class="section-title">Available Drivers (Online Only)</div>
+              <div id="nearby-drivers-list">
+                <!-- Injected dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Booking Tracking -->
+          <div class="card hidden" id="customer-active-booking-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div class="section-title">Trip Status</div>
+              <span class="status-badge status-pending" id="customer-booking-status-badge">PENDING</span>
+            </div>
+            <div style="padding: 10px; background-color: var(--bg-tertiary); border-radius: 8px;">
+              <div style="font-size: 0.85rem;" id="customer-booking-driver-name">Driver: ---</div>
+              <div style="font-size: 0.85rem;" id="customer-booking-fare">Fare: ---</div>
+              <div style="font-size: 0.85rem; font-weight: bold; color: var(--warning); margin-top: 5px;" id="customer-booking-otp-box">
+                Ride Start OTP: <span id="customer-booking-otp">----</span>
+              </div>
+              <div style="font-size: 0.85rem; color: var(--success); font-weight: bold;" id="customer-booking-eta-box">
+                ETA: <span id="customer-booking-eta">5</span> mins
+              </div>
+            </div>
+            <button class="btn btn-error" id="btn-customer-cancel-ride">Cancel Request / Ride</button>
+          </div>
+
+          <!-- Rating Screen -->
+          <div class="card hidden" id="customer-review-card">
+            <div class="section-title">Rate Your Driver</div>
+            <div style="font-size: 0.9rem;">How was your trip?</div>
+            <div class="star-rating" id="customer-star-rating">
+              <span class="star" data-val="1">★</span>
+              <span class="star" data-val="2">★</span>
+              <span class="star" data-val="3">★</span>
+              <span class="star" data-val="4">★</span>
+              <span class="star" data-val="5">★</span>
+            </div>
+            <div class="form-group">
+              <label>Comments (Optional)</label>
+              <textarea id="customer-review-comment" rows="2" placeholder="Write feedback..."></textarea>
+            </div>
+            <button class="btn btn-success" id="btn-customer-submit-review">Submit Review</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT SIDE: Driver Panel -->
+      <div class="panel" id="driver-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Driver App</h2>
+            <div class="panel-subtitle">Go online, manage requests, accept rides & earn</div>
+          </div>
+          <div id="driver-status-container">
+            <span class="status-badge status-offline">NOT LOGGED IN</span>
+          </div>
+        </div>
+
+        <!-- Auth Section -->
+        <div class="card" id="driver-auth-card">
+          <div class="section-title">Step 1: Authenticate</div>
+          <div class="form-group">
+            <label>Mobile Number</label>
+            <input type="tel" id="driver-phone" placeholder="9999999997" value="9999999997">
+          </div>
+          <div id="driver-recaptcha-container"></div>
+          <button class="btn" id="btn-driver-send-otp">Send OTP</button>
+          
+          <div class="form-group hidden" id="driver-otp-group">
+            <label>Enter 6-Digit OTP</label>
+            <input type="text" id="driver-otp" placeholder="123456" value="123456">
+            <button class="btn btn-success" style="margin-top: 10px;" id="btn-driver-verify-otp">Verify & Sign In</button>
+          </div>
+        </div>
+
+        <!-- Onboarding Form (Driver) -->
+        <div class="card hidden" id="driver-onboarding-card">
+          <div class="section-title">New Driver Profile Onboarding</div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="driver-reg-name" placeholder="Ravi Kumar">
+          </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="driver-reg-dob">
+          </div>
+          <div class="form-group">
+            <label>Aadhar Card Number</label>
+            <input type="text" id="driver-reg-aadhar" placeholder="1234 5678 9012">
+          </div>
+          <div class="form-group">
+            <label>Driving License (DL) Number</label>
+            <input type="text" id="driver-reg-dl" placeholder="DL-1234567890">
+          </div>
+          <button class="btn btn-success" id="btn-driver-complete-onboarding">Register as Driver</button>
+        </div>
+
+        <!-- Main Dashboard View -->
+        <div class="hidden" id="driver-dashboard" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Driver Profile & Status -->
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div id="driver-profile-info">
+                <div style="font-weight: 600; font-size: 1.1rem;" id="lbl-driver-name">---</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);" id="lbl-driver-phone">---</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);" id="lbl-driver-rating">Rating: ⭐ ---</div>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                <span class="status-badge status-offline" id="driver-online-status-label">OFFLINE</span>
+                <div class="switch-container">
+                  <label class="switch">
+                    <input type="checkbox" id="driver-online-toggle">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px;">
+              ⚠️ <em>Drivers cannot edit registration details (Name, DOB, DL, Aadhar) after registration.</em>
+            </div>
+          </div>
+
+          <!-- Driver Current Location Simulator -->
+          <div class="card">
+            <div class="section-title">Simulate Driver Location</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);">
+              Double click on the map to place the driver or select a coordinate.
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label>Latitude</label>
+                <input type="number" step="0.0001" id="driver-sim-lat" value="26.4499">
+              </div>
+              <div class="form-group">
+                <label>Longitude</label>
+                <input type="number" step="0.0001" id="driver-sim-lng" value="80.3319">
+              </div>
+            </div>
+            <button class="btn btn-secondary" id="btn-driver-update-location">Send Location Update</button>
+          </div>
+
+          <!-- Active Booking Requests -->
+          <div class="card hidden" id="driver-ride-request-card">
+            <div class="section-title" style="color: var(--warning); display: flex; align-items: center; gap: 6px;">
+              🔔 Incoming Ride Request!
+            </div>
+            <div style="padding: 12px; background-color: var(--bg-tertiary); border-radius: 8px;">
+              <div style="font-size: 0.9rem;" id="driver-request-pickup">Pickup: ---</div>
+              <div style="font-size: 0.9rem;" id="driver-request-drop">Drop: ---</div>
+              <div style="font-weight: bold; margin-top: 6px; font-size: 1rem;" id="driver-request-price">Fare: ₹---</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <button class="btn btn-success" id="btn-driver-accept-ride">Accept Ride</button>
+              <button class="btn btn-error" id="btn-driver-decline-ride">Decline</button>
+            </div>
+          </div>
+
+          <!-- Active Booking Job Tracking -->
+          <div class="card hidden" id="driver-active-job-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div class="section-title">Active Ride Job</div>
+              <span class="status-badge status-pending" id="driver-job-status-badge">ACCEPTED</span>
+            </div>
+            <div style="padding: 10px; background-color: var(--bg-tertiary); border-radius: 8px; margin-bottom: 10px;">
+              <div id="driver-job-customer-name">Customer: ---</div>
+              <div id="driver-job-pickup">Pickup: ---</div>
+              <div id="driver-job-drop">Drop: ---</div>
+              <div style="font-weight: bold;" id="driver-job-amount">Amount: ₹---</div>
+            </div>
+
+            <!-- OTP Input to start the trip -->
+            <div class="form-group hidden" id="driver-otp-start-group" style="border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 10px;">
+              <label>Enter Ride OTP (From Customer)</label>
+              <input type="text" id="driver-start-otp-input" placeholder="1234">
+            </div>
+
+            <!-- Cash Payment notification when completed -->
+            <div class="card hidden btn-success" id="driver-cash-notification" style="padding: 10px; margin-bottom: 10px; background-color: rgba(16, 185, 129, 0.15); border-color: var(--success);">
+              <div style="font-weight: bold; font-size: 0.85rem;">Collect Cash:</div>
+              <div id="lbl-cash-amount">₹---</div>
+            </div>
+
+            <button class="btn" id="btn-driver-job-action">Arrived at Pickup</button>
+          </div>
+
+          <!-- Review Customer -->
+          <div class="card hidden" id="driver-review-card">
+            <div class="section-title">Rate Customer</div>
+            <div style="font-size: 0.9rem;">Rate your experience with this customer:</div>
+            <div class="star-rating" id="driver-star-rating">
+              <span class="star" data-val="1">★</span>
+              <span class="star" data-val="2">★</span>
+              <span class="star" data-val="3">★</span>
+              <span class="star" data-val="4">★</span>
+              <span class="star" data-val="5">★</span>
+            </div>
+            <div class="form-group">
+              <label>Comments (Optional)</label>
+              <textarea id="driver-review-comment" rows="2" placeholder="Write feedback..."></textarea>
+            </div>
+            <button class="btn btn-success" id="btn-driver-submit-review">Submit Review</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAP CONTAINER -->
+    <div class="map-section">
+      <div id="map"></div>
+      
+      <!-- Info overlay on map -->
+      <div class="card map-overlay-card">
+        <div class="section-title">Map Controls</div>
+        <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px;">
+          <div>🔴 <strong>Red Marker:</strong> Driver Location</div>
+          <div>🔵 <strong>Blue Marker:</strong> Pickup Point</div>
+          <div>🟢 <strong>Green Marker:</strong> Drop-off Point</div>
+          <div style="border-top: 1px solid var(--border); padding-top: 6px; margin-top: 4px;">
+            <button class="btn btn-secondary" style="width: 100%; font-size: 0.75rem; padding: 6px;" onclick="resetMap()">Reset Coordinates</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Firebase JS SDK (Loaded from CDN) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // Default configuration (placeholder; will fall back to mock unless custom is entered)
+    const firebaseConfig = {
+      apiKey: "MOCK_API_KEY",
+      authDomain: "drivemate-8c07f.firebaseapp.com",
+      projectId: "drivemate-8c07f",
+      storageBucket: "drivemate-8c07f.appspot.com",
+      messagingSenderId: "mock",
+      appId: "mock"
+    };
+
+    // Initialize App & Auth
+    let app, auth;
+    try {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      console.log("Firebase SDK initialized in simulator mode");
+    } catch (e) {
+      console.warn("Could not init Firebase SDK with default keys:", e);
+    }
+
+    // STATE VARIABLES
+    const API_BASE = "http://127.0.0.1:54321/functions/v1";
+    let isMockAuth = true;
+
+    // Tokens & User objects
+    let customerToken = null;
+    let customerUserObj = null;
+    let customerConfirmationResult = null;
+
+    let driverToken = null;
+    let driverUserObj = null;
+    let driverConfirmationResult = null;
+
+    // Map Markers & coordinates
+    let map = null;
+    let pickupMarker = null;
+    let dropMarker = null;
+    let driverMarker = null;
+    let routeLine = null;
+
+    let pickupCoords = null;
+    let dropCoords = null;
+    let driverCoords = { lat: 26.4499, lng: 80.3319 };
+
+    // Active Ride/Booking state
+    let activeBooking = null; // tracking booking details on both sides
+    let customerReviewRating = 0;
+    let driverReviewRating = 0;
+
+    let bookingPollerId = null;
+
+    // INITIALIZATION
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      setupEventListeners();
+      checkSavedSessions();
+    });
+
+    // TOASTS
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `
+        <span>${message}</span>
+        <span class="toast-close">&times;</span>
+      `;
+      container.appendChild(toast);
+      
+      toast.querySelector('.toast-close').addEventListener('click', () => {
+        toast.remove();
+      });
+
+      setTimeout(() => {
+        toast.remove();
+      }, 5000);
+    }
+
+    // MAP SETUP
+    function initMap() {
+      // Center map around Kanpur/Northern India region matching coords (26.4499, 80.3319)
+      map = L.map('map').setView([26.4499, 80.3319], 13);
+      
+      // Modern sleek map layer (CartoDB Dark Matter)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+      }).addTo(map);
+
+      // Initial Driver Marker
+      const driverIcon = L.icon({
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/854/854878.png', // Red/Blue pin or car icon
+        iconSize: [35, 35],
+        iconAnchor: [17, 35]
+      });
+      driverMarker = L.marker([driverCoords.lat, driverCoords.lng], { icon: driverIcon, draggable: true }).addTo(map);
+      driverMarker.bindPopup("<b>Driver Location</b><br>Drag me to move driver!").openPopup();
+
+      driverMarker.on('dragend', (e) => {
+        const position = driverMarker.getLatLng();
+        driverCoords = { lat: position.lat, lng: position.lng };
+        document.getElementById('driver-sim-lat').value = position.lat.toFixed(6);
+        document.getElementById('driver-sim-lng').value = position.lng.toFixed(6);
+        showToast(`Driver dragged to: ${position.lat.toFixed(4)}, ${position.lng.toFixed(4)}`);
+        
+        // If driver is online, automatically update backend with new location
+        if (driverToken && document.getElementById('driver-online-toggle').checked) {
+          sendDriverLocationUpdate();
+        }
+      });
+
+      // Map Click logic (Single click for pickup, double click or second click for drop)
+      map.on('click', (e) => {
+        if (!pickupCoords) {
+          pickupCoords = e.latlng;
+          document.getElementById('txt-pickup-coord').value = `${pickupCoords.lat.toFixed(5)}, ${pickupCoords.lng.toFixed(5)}`;
+          
+          if (pickupMarker) map.removeLayer(pickupMarker);
+          pickupMarker = L.marker(pickupCoords, {
+            icon: L.icon({
+              iconUrl: 'https://cdn-icons-png.flaticon.com/512/5693/5693831.png', // Blue home/pickup flag
+              iconSize: [35, 35],
+              iconAnchor: [17, 35]
+            })
+          }).addTo(map).bindPopup("Pickup Point").openPopup();
+          
+          updateRoute();
+        } else if (!dropCoords) {
+          dropCoords = e.latlng;
+          document.getElementById('txt-drop-coord').value = `${dropCoords.lat.toFixed(5)}, ${dropCoords.lng.toFixed(5)}`;
+          
+          if (dropMarker) map.removeLayer(dropMarker);
+          dropMarker = L.marker(dropCoords, {
+            icon: L.icon({
+              iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png', // Green destination pin
+              iconSize: [35, 35],
+              iconAnchor: [17, 35]
+            })
+          }).addTo(map).bindPopup("Drop-off Destination").openPopup();
+          
+          updateRoute();
+        } else {
+          // Reset drop and set new pickup
+          resetRoute();
+          pickupCoords = e.latlng;
+          document.getElementById('txt-pickup-coord').value = `${pickupCoords.lat.toFixed(5)}, ${pickupCoords.lng.toFixed(5)}`;
+          pickupMarker = L.marker(pickupCoords, {
+            icon: L.icon({
+              iconUrl: 'https://cdn-icons-png.flaticon.com/512/5693/5693831.png',
+              iconSize: [35, 35],
+              iconAnchor: [17, 35]
+            })
+          }).addTo(map).bindPopup("Pickup Point").openPopup();
+        }
+      });
+
+      // Double-click sets drop coords directly
+      map.on('dblclick', (e) => {
+        dropCoords = e.latlng;
+        document.getElementById('txt-drop-coord').value = `${dropCoords.lat.toFixed(5)}, ${dropCoords.lng.toFixed(5)}`;
+        if (dropMarker) map.removeLayer(dropMarker);
+        dropMarker = L.marker(dropCoords, {
+          icon: L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
+            iconSize: [35, 35],
+            iconAnchor: [17, 35]
+          })
+        }).addTo(map).bindPopup("Drop-off Destination").openPopup();
+        updateRoute();
+      });
+    }
+
+    window.resetMap = function() {
+      resetRoute();
+      driverCoords = { lat: 26.4499, lng: 80.3319 };
+      driverMarker.setLatLng([driverCoords.lat, driverCoords.lng]);
+      document.getElementById('driver-sim-lat').value = driverCoords.lat;
+      document.getElementById('driver-sim-lng').value = driverCoords.lng;
+      map.setView([26.4499, 80.3319], 13);
+      showToast("Map elements reset to defaults");
+    }
+
+    function resetRoute() {
+      if (pickupMarker) map.removeLayer(pickupMarker);
+      if (dropMarker) map.removeLayer(dropMarker);
+      if (routeLine) map.removeLayer(routeLine);
+      pickupCoords = null;
+      dropCoords = null;
+      pickupMarker = null;
+      dropMarker = null;
+      routeLine = null;
+      document.getElementById('txt-pickup-coord').value = '';
+      document.getElementById('txt-drop-coord').value = '';
+    }
+
+    function updateRoute() {
+      if (pickupCoords && dropCoords) {
+        if (routeLine) map.removeLayer(routeLine);
+        routeLine = L.polyline([pickupCoords, dropCoords], { color: '#3b82f6', weight: 4, dashArray: '5, 10' }).addTo(map);
+        map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+      }
+    }
+
+    // EVENT LISTENERS SETUP
+    function setupEventListeners() {
+      // Mock Auth Mode Toggle
+      document.getElementById('mock-auth-toggle').addEventListener('change', (e) => {
+        isMockAuth = e.target.checked;
+        const label = document.getElementById('auth-mode-label');
+        if (isMockAuth) {
+          label.innerText = "LOCAL BYPASS";
+          label.style.color = "var(--success)";
+          showToast("Local Mock Auth Bypass enabled (No Firebase authentication required)");
+        } else {
+          label.innerText = "REAL FIREBASE AUTH";
+          label.style.color = "var(--accent)";
+          showToast("Real Firebase Auth enabled. Config credentials required.");
+        }
+      });
+
+      // CUSTOMER LOGIN FLOW
+      document.getElementById('btn-customer-send-otp').addEventListener('click', () => sendOtp('customer'));
+      document.getElementById('btn-customer-verify-otp').addEventListener('click', () => verifyOtp('customer'));
+      document.getElementById('btn-customer-complete-onboarding').addEventListener('click', completeCustomerOnboarding);
+      
+      // CUSTOMER ACTIONS
+      document.getElementById('btn-customer-edit-toggle').addEventListener('click', toggleCustomerEditForm);
+      document.getElementById('btn-customer-save-profile').addEventListener('click', saveCustomerCarDetails);
+      document.getElementById('btn-customer-search-drivers').addEventListener('click', searchNearbyDrivers);
+      document.getElementById('btn-customer-cancel-ride').addEventListener('click', cancelRide);
+      document.getElementById('btn-customer-submit-review').addEventListener('click', submitCustomerReview);
+
+      // Star Selection
+      setupStarRatings('customer-star-rating', (val) => { customerReviewRating = val; });
+      setupStarRatings('driver-star-rating', (val) => { driverReviewRating = val; });
+
+      // DRIVER LOGIN FLOW
+      document.getElementById('btn-driver-send-otp').addEventListener('click', () => sendOtp('driver'));
+      document.getElementById('btn-driver-verify-otp').addEventListener('click', () => verifyOtp('driver'));
+      document.getElementById('btn-driver-complete-onboarding').addEventListener('click', completeDriverOnboarding);
+
+      // DRIVER ACTIONS
+      document.getElementById('driver-online-toggle').addEventListener('change', toggleDriverOnlineStatus);
+      document.getElementById('btn-driver-update-location').addEventListener('click', sendDriverLocationUpdate);
+      document.getElementById('btn-driver-accept-ride').addEventListener('click', acceptRide);
+      document.getElementById('btn-driver-decline-ride').addEventListener('click', declineRide);
+      document.getElementById('btn-driver-job-action').addEventListener('click', advanceJobState);
+      document.getElementById('btn-driver-submit-review').addEventListener('click', submitDriverReview);
+    }
+
+    function setupStarRatings(containerId, callback) {
+      const stars = document.querySelectorAll(`#${containerId} .star`);
+      stars.forEach(star => {
+        star.addEventListener('click', (e) => {
+          const val = parseInt(e.target.dataset.val);
+          stars.forEach(s => {
+            if (parseInt(s.dataset.val) <= val) {
+              s.classList.add('selected');
+            } else {
+              s.classList.remove('selected');
+            }
+          });
+          callback(val);
+        });
+      });
+    }
+
+    // CHECK SAVED SESSIONS
+    function checkSavedSessions() {
+      const savedCustToken = localStorage.getItem('customerToken');
+      const savedDriverToken = localStorage.getItem('driverToken');
+      
+      if (savedCustToken) {
+        customerToken = savedCustToken;
+        fetchUserProfile('customer');
+      }
+      if (savedDriverToken) {
+        driverToken = savedDriverToken;
+        fetchUserProfile('driver');
+      }
+    }
+
+    // AUTH ACTIONS
+    async function sendOtp(role) {
+      const phoneInput = document.getElementById(`${role}-phone`).value.trim();
+      if (!phoneInput) {
+        showToast("Please enter a valid phone number", "error");
+        return;
+      }
+      
+      if (isMockAuth) {
+        showToast(`[Mock] OTP Sent to +91 ${phoneInput}. Enter 123456 to verify.`, "success");
+        document.getElementById(`${role}-otp-group`).classList.remove('hidden');
+      } else {
+        showToast("Firebase Phone auth is currently in local simulation mode. Check checkbox to use mock token.");
+      }
+    }
+
+    async function verifyOtp(role) {
+      const phone = document.getElementById(`${role}-phone`).value.trim();
+      const otp = document.getElementById(`${role}-otp`).value.trim();
+      
+      if (!otp) {
+        showToast("Please enter the 6-digit OTP", "error");
+        return;
+      }
+
+      showToast("Verifying token...");
+      
+      try {
+        let firebaseToken = "";
+        if (isMockAuth) {
+          firebaseToken = `mock-token-${phone}`;
+        } else {
+          showToast("Mock Auth is recommended for rapid local testing.", "warning");
+          return;
+        }
+
+        // Call backend auth-session endpoint
+        const res = await fetch(`${API_BASE}/auth-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ firebaseIdToken: firebaseToken })
+        });
+
+        const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.message || "Auth failed");
+        }
+
+        if (data.isNewUser) {
+          showToast("Phone verified! You are a new user. Please complete onboarding.", "info");
+          // Hide auth form, show onboarding form
+          document.getElementById(`${role}-auth-card`).classList.add('hidden');
+          document.getElementById(`${role}-onboarding-card`).classList.remove('hidden');
+          
+          // Save temporary UID
+          if (role === 'customer') {
+            customerUserObj = { firebaseUid: data.firebaseUid, phone: data.phone };
+          } else {
+            driverUserObj = { firebaseUid: data.firebaseUid, phone: data.phone };
+          }
+        } else {
+          // Success login
+          showToast(`Logged in successfully!`, "success");
+          saveUserSession(role, data.accessToken, data.user);
+        }
+      } catch (err) {
+        showToast(err.message, "error");
+        console.error(err);
+      }
+    }
+
+    function saveUserSession(role, token, user) {
+      localStorage.setItem(`${role}Token`, token);
+      if (role === 'customer') {
+        customerToken = token;
+        customerUserObj = user;
+        updateCustomerDashboard(user);
+      } else {
+        driverToken = token;
+        driverUserObj = user;
+        updateDriverDashboard(user);
+      }
+    }
+
+    // ONBOARDING
+    async function completeCustomerOnboarding() {
+      const name = document.getElementById('customer-reg-name').value.trim();
+      const dob = document.getElementById('customer-reg-dob').value;
+      const carName = document.getElementById('customer-reg-car-name').value.trim();
+      const carRc = document.getElementById('customer-reg-car-rc').value.trim();
+
+      if (!name || !dob || !carName || !carRc) {
+        showToast("Please fill all details to register", "error");
+        return;
+      }
+
+      const tempUser = customerUserObj;
+      const tokenPayload = isMockAuth ? `mock-token-${tempUser.phone}` : "fb-token";
+
+      try {
+        const res = await fetch(`${API_BASE}/auth-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firebaseIdToken: tokenPayload,
+            role: 'customer',
+            fullName: name,
+            dob: dob,
+            carName: carName,
+            carRcName: carRc
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Registration failed");
+
+        showToast("Customer Account Created!", "success");
+        document.getElementById('customer-onboarding-card').classList.add('hidden');
+        saveUserSession('customer', data.accessToken, data.user);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    async function completeDriverOnboarding() {
+      const name = document.getElementById('driver-reg-name').value.trim();
+      const dob = document.getElementById('driver-reg-dob').value;
+      const aadhar = document.getElementById('driver-reg-aadhar').value.trim();
+      const dl = document.getElementById('driver-reg-dl').value.trim();
+
+      if (!name || !dob || !aadhar || !dl) {
+        showToast("Please fill all details to register", "error");
+        return;
+      }
+
+      const tempUser = driverUserObj;
+      const tokenPayload = isMockAuth ? `mock-token-${tempUser.phone}` : "fb-token";
+
+      try {
+        const res = await fetch(`${API_BASE}/auth-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firebaseIdToken: tokenPayload,
+            role: 'driver',
+            fullName: name,
+            dob: dob,
+            aadharNumber: aadhar,
+            dlNumber: dl
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Registration failed");
+
+        showToast("Driver Account Registered! Auto-approved for testing.", "success");
+        document.getElementById('driver-onboarding-card').classList.add('hidden');
+        saveUserSession('driver', data.accessToken, data.user);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    // UPDATE PROFILE UI
+    function updateCustomerDashboard(user) {
+      document.getElementById('customer-auth-card').classList.add('hidden');
+      document.getElementById('customer-dashboard').classList.remove('hidden');
+      
+      document.getElementById('customer-status-container').innerHTML = `<span class="status-badge status-online">LOGGED IN</span>`;
+      
+      document.getElementById('lbl-customer-name').innerText = user.fullName || "John Customer";
+      document.getElementById('lbl-customer-phone').innerText = `+91 ${user.phone}`;
+      document.getElementById('lbl-customer-rating').innerText = `Rating: ⭐ ${user.ratingAsCustomer || '5.0'} (${user.totalTripsAsCustomer || 0} trips)`;
+      document.getElementById('lbl-customer-car').innerText = user.carName || "Not added";
+      document.getElementById('lbl-customer-rc').innerText = `RC Name: ${user.carRcName || 'Not added'}`;
+
+      // Set input values in edit form
+      document.getElementById('customer-edit-car-name').value = user.carName || '';
+      document.getElementById('customer-edit-car-rc').value = user.carRcName || '';
+    }
+
+    function updateDriverDashboard(user) {
+      document.getElementById('driver-auth-card').classList.add('hidden');
+      document.getElementById('driver-dashboard').classList.remove('hidden');
+      
+      document.getElementById('driver-status-container').innerHTML = `<span class="status-badge status-online">LOGGED IN</span>`;
+      
+      document.getElementById('lbl-driver-name').innerText = user.fullName || "Ravi Kumar (Driver)";
+      document.getElementById('lbl-driver-phone').innerText = `+91 ${user.phone}`;
+      
+      // Fetch details from me API to get driver profile values
+      fetchUserProfile('driver');
+    }
+
+    async function fetchUserProfile(role) {
+      const token = role === 'customer' ? customerToken : driverToken;
+      try {
+        const res = await fetch(`${API_BASE}/auth-me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+
+        if (role === 'customer') {
+          customerUserObj = data;
+          updateCustomerDashboard(data);
+        } else {
+          driverUserObj = data;
+          document.getElementById('lbl-driver-name').innerText = data.fullName;
+          document.getElementById('lbl-driver-phone').innerText = `+91 ${data.phone}`;
+          const ratingVal = data.driverProfile ? data.driverProfile.rating : 5.0;
+          const totalTripsVal = data.driverProfile ? data.driverProfile.totalTrips : 0;
+          document.getElementById('lbl-driver-rating').innerText = `Rating: ⭐ ${ratingVal} (${totalTripsVal} trips)`;
+          
+          // Sync online status switch
+          if (data.driverProfile) {
+            document.getElementById('driver-online-toggle').checked = data.driverProfile.isAvailable;
+            const label = document.getElementById('driver-online-status-label');
+            if (data.driverProfile.isAvailable) {
+              label.innerText = "ONLINE";
+              label.className = "status-badge status-online";
+            } else {
+              label.innerText = "OFFLINE";
+              label.className = "status-badge status-offline";
+            }
+          }
+        }
+      } catch (err) {
+        console.error("fetchUserProfile failed:", err);
+      }
+    }
+
+    // EDIT PROFILE
+    function toggleCustomerEditForm() {
+      const form = document.getElementById('customer-profile-edit-form');
+      const info = document.getElementById('customer-profile-info');
+      const btn = document.getElementById('btn-customer-edit-toggle');
+      
+      if (form.classList.contains('hidden')) {
+        form.classList.remove('hidden');
+        info.classList.add('hidden');
+        btn.innerText = "Cancel";
+      } else {
+        form.classList.add('hidden');
+        info.classList.remove('hidden');
+        btn.innerText = "Edit Profile";
+      }
+    }
+
+    async function saveCustomerCarDetails() {
+      const carName = document.getElementById('customer-edit-car-name').value.trim();
+      const carRc = document.getElementById('customer-edit-car-rc').value.trim();
+      
+      if (!carName || !carRc) {
+        showToast("Car details cannot be empty", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/users-profile`, {
+          method: 'PATCH',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${customerToken}`
+          },
+          body: JSON.stringify({ carName, carRcName: carRc })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to update profile");
+
+        showToast("Car details updated successfully!", "success");
+        customerUserObj = data;
+        updateCustomerDashboard(data);
+        toggleCustomerEditForm();
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    // DRIVER ONLINE/OFFLINE
+    async function toggleDriverOnlineStatus(e) {
+      const isOnline = e.target.checked;
+      const label = document.getElementById('driver-online-status-label');
+      
+      try {
+        // 1. Update Availability
+        const resAvail = await fetch(`${API_BASE}/drivers-availability`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${driverToken}`
+          },
+          body: JSON.stringify({ isAvailable: isOnline })
+        });
+        if (!resAvail.ok) throw new Error("Failed to set availability");
+
+        // 2. Update Location Online flag
+        await sendDriverLocationUpdate(isOnline);
+
+        if (isOnline) {
+          label.innerText = "ONLINE";
+          label.className = "status-badge status-online";
+          showToast("You are now online! Customers can find you.", "success");
+          startBookingPoller(); // start checking for bookings
+        } else {
+          label.innerText = "OFFLINE";
+          label.className = "status-badge status-offline";
+          showToast("You are now offline.", "info");
+          stopBookingPoller();
+        }
+      } catch (err) {
+        showToast(err.message, "error");
+        e.target.checked = !isOnline; // revert
+      }
+    }
+
+    async function sendDriverLocationUpdate(isOnlineFlag = null) {
+      const lat = parseFloat(document.getElementById('driver-sim-lat').value);
+      const lng = parseFloat(document.getElementById('driver-sim-lng').value);
+      const isOnline = isOnlineFlag !== null ? isOnlineFlag : document.getElementById('driver-online-toggle').checked;
+
+      if (isNaN(lat) || isNaN(lng)) {
+        showToast("Invalid location values", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/drivers-location`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${driverToken}`
+          },
+          body: JSON.stringify({
+            latitude: lat,
+            longitude: lng,
+            isOnline: isOnline
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to update location");
+
+        driverCoords = { lat, lng };
+        driverMarker.setLatLng([lat, lng]);
+        
+        showToast(`Driver location sent: [${lat.toFixed(5)}, ${lng.toFixed(5)}] (Online: ${isOnline})`, "success");
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    // SEARCH DRIVERS
+    async function searchNearbyDrivers() {
+      if (!pickupCoords || !dropCoords) {
+        showToast("Please select Pickup and Drop coordinates on the map", "warning");
+        return;
+      }
+
+      document.getElementById('search-results-section').classList.remove('hidden');
+      const listContainer = document.getElementById('nearby-drivers-list');
+      listContainer.innerHTML = '<em>Searching for online drivers...</em>';
+
+      try {
+        const res = await fetch(`${API_BASE}/drivers-nearby?latitude=${pickupCoords.lat}&longitude=${pickupCoords.lng}&dropLatitude=${dropCoords.lat}&dropLongitude=${dropCoords.lng}&radiusKm=20`, {
+          headers: { 'Authorization': `Bearer ${customerToken}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Search failed");
+
+        const drivers = data.drivers || [];
+        if (drivers.length === 0) {
+          listContainer.innerHTML = '<div style="color: var(--error); padding: 10px;">❌ No online drivers nearby. Make sure you set the driver panel to "ONLINE" on the right side.</div>';
+          return;
+        }
+
+        listContainer.innerHTML = '';
+        drivers.forEach(d => {
+          const item = document.createElement('div');
+          item.className = 'driver-list-item card';
+          item.style.marginBottom = '8px';
+          item.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong style="color: var(--success);">${d.name}</strong>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">Rating: ⭐ ${d.rating} | Experience: ${d.experience}</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">Distance: ${d.distanceKm} km | ETA: ${d.etaMinutes} mins</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-weight: 700; color: var(--accent); font-size: 1.1rem;">₹${d.tripFare}</div>
+                <button class="btn btn-success" style="padding: 6px 10px; font-size: 0.8rem; margin-top: 5px;" onclick="bookDriver('${d.id}', '${d.tripFare}')">Confirm Ride</button>
+              </div>
+            </div>
+          `;
+          listContainer.appendChild(item);
+        });
+      } catch (err) {
+        showToast(err.message, "error");
+        listContainer.innerHTML = `<span style="color: var(--error);">${err.message}</span>`;
+      }
+    }
+
+    // BOOK DRIVER
+    window.bookDriver = async function(driverId, fare) {
+      if (!pickupCoords || !dropCoords) return;
+
+      showToast("Creating booking request...", "info");
+
+      try {
+        const res = await fetch(`${API_BASE}/bookings-create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${customerToken}`
+          },
+          body: JSON.stringify({
+            driverId: driverId,
+            serviceType: 'local',
+            pickupAddress: "Pickup Point Selected on Map",
+            pickupLatitude: pickupCoords.lat,
+            pickupLongitude: pickupCoords.lng,
+            dropAddress: "Drop Point Selected on Map",
+            dropLatitude: dropCoords.lat,
+            dropLongitude: dropCoords.lng,
+            vehicleNumber: customerUserObj.carName ? customerUserObj.carName.toUpperCase() : "HR-26-AB-1234",
+            vehicleModel: customerUserObj.carName || "Sedan"
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to create booking");
+
+        showToast("Ride requested! Waiting for driver to accept...", "success");
+        activeBooking = data;
+        
+        // Show active booking UI on customer side
+        showCustomerBookingUI(data);
+
+        // Notify driver side instantly by forcing a poll check
+        if (driverToken) {
+          pollForDriverBookings();
+        }
+
+        // Start customer tracking poller
+        startBookingPoller();
+
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    // SHOW BOOKING STATUS
+    function showCustomerBookingUI(booking) {
+      const card = document.getElementById('customer-active-booking-card');
+      card.classList.remove('hidden');
+      document.getElementById('customer-booking-status-badge').innerText = booking.status.toUpperCase();
+      document.getElementById('customer-booking-driver-name').innerText = `Driver: Assigned`;
+      document.getElementById('customer-booking-fare').innerText = `Fare: ₹${booking.totalAmount}`;
+      
+      // OTP & ETA (will populate when accepted)
+      if (booking.status === 'driver_accepted' || booking.status === 'arrived' || booking.status === 'started') {
+        document.getElementById('customer-booking-otp-box').classList.remove('hidden');
+        document.getElementById('customer-booking-eta-box').classList.remove('hidden');
+        
+        // Fetch fresh OTP if driver accepted
+        if (customerUserObj && customerUserObj.rideOtp) {
+          document.getElementById('customer-booking-otp').innerText = customerUserObj.rideOtp;
+        } else if (booking.otp) {
+          document.getElementById('customer-booking-otp').innerText = booking.otp;
+        }
+        
+        document.getElementById('customer-booking-eta').innerText = booking.eta || "3";
+      } else {
+        document.getElementById('customer-booking-otp-box').classList.add('hidden');
+        document.getElementById('customer-booking-eta-box').classList.add('hidden');
+      }
+
+      // If completed, show review card
+      if (booking.status === 'completed') {
+        card.classList.add('hidden');
+        document.getElementById('customer-review-card').classList.remove('hidden');
+        stopBookingPoller();
+      }
+
+      if (booking.status === 'cancelled') {
+        card.classList.add('hidden');
+        showToast("Booking was cancelled", "info");
+        stopBookingPoller();
+      }
+    }
+
+    // DRIVER BOOKINGS CHECKING
+    async function pollForDriverBookings() {
+      if (!driverToken) return;
+      try {
+        const res = await fetch(`${API_BASE}/bookings-history`, {
+          headers: { 'Authorization': `Bearer ${driverToken}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+
+        const bookings = data.bookings || [];
+        // Find if there is a pending booking for this driver
+        const pending = bookings.find(b => b.status === 'pending');
+        const active = bookings.find(b => ['driver_accepted', 'arrived', 'started'].includes(b.status));
+
+        if (pending && (!activeBooking || activeBooking.id !== pending.id)) {
+          activeBooking = pending;
+          showDriverRequestCard(pending);
+        } else if (active) {
+          activeBooking = active;
+          showDriverActiveJobCard(active);
+        } else if (activeBooking && activeBooking.status !== 'completed' && activeBooking.status !== 'cancelled') {
+          // Sync state if it was updated elsewhere
+          const syncRes = await fetch(`${API_BASE}/bookings-get?bookingId=${activeBooking.id}`, {
+            headers: { 'Authorization': `Bearer ${driverToken}` }
+          });
+          const syncData = await syncRes.json();
+          if (syncRes.ok) {
+            activeBooking = syncData;
+            if (syncData.status === 'completed') {
+              showDriverReviewCard();
+            } else if (syncData.status === 'cancelled') {
+              hideDriverJobCards();
+            } else {
+              showDriverActiveJobCard(syncData);
+            }
+          }
+        } else {
+          hideDriverJobCards();
+        }
+      } catch (err) {
+        console.error("Driver poller failed:", err);
+      }
+    }
+
+    function showDriverRequestCard(booking) {
+      document.getElementById('driver-ride-request-card').classList.remove('hidden');
+      document.getElementById('driver-active-job-card').classList.add('hidden');
+      
+      document.getElementById('driver-request-pickup').innerText = `Pickup: Lat ${booking.pickupLatitude.toFixed(4)}, Lng ${booking.pickupLongitude.toFixed(4)}`;
+      document.getElementById('driver-request-drop').innerText = `Drop: Lat ${booking.dropLatitude.toFixed(4)}, Lng ${booking.dropLongitude.toFixed(4)}`;
+      document.getElementById('driver-request-price').innerText = `Fare: ₹${booking.totalAmount}`;
+    }
+
+    function showDriverActiveJobCard(booking) {
+      document.getElementById('driver-ride-request-card').classList.add('hidden');
+      const card = document.getElementById('driver-active-job-card');
+      card.classList.remove('hidden');
+
+      document.getElementById('driver-job-status-badge').innerText = booking.status.toUpperCase();
+      document.getElementById('driver-job-customer-name').innerText = `Customer: Assigned`;
+      document.getElementById('driver-job-pickup').innerText = `Pickup Lat: ${booking.pickupLatitude.toFixed(4)}`;
+      document.getElementById('driver-job-drop').innerText = `Drop Lat: ${booking.dropLatitude.toFixed(4)}`;
+      document.getElementById('driver-job-amount').innerText = `Amount: ₹${booking.totalAmount}`;
+
+      const actionBtn = document.getElementById('btn-driver-job-action');
+      const otpGroup = document.getElementById('driver-otp-start-group');
+      const cashNotification = document.getElementById('driver-cash-notification');
+
+      otpGroup.classList.add('hidden');
+      cashNotification.classList.add('hidden');
+
+      if (booking.status === 'driver_accepted') {
+        actionBtn.innerText = "Arrived at Pickup";
+        actionBtn.className = "btn";
+        actionBtn.disabled = false;
+      } else if (booking.status === 'arrived') {
+        actionBtn.innerText = "Start Trip (Enter OTP)";
+        actionBtn.className = "btn btn-success";
+        actionBtn.disabled = false;
+        otpGroup.classList.remove('hidden');
+      } else if (booking.status === 'started') {
+        actionBtn.innerText = "Complete Ride";
+        actionBtn.className = "btn btn-error";
+        actionBtn.disabled = false;
+      } else if (booking.status === 'completed' && booking.paymentStatus === 'cod_due') {
+        // Collect cash
+        actionBtn.innerText = "Collect Cash Payment";
+        actionBtn.className = "btn btn-success";
+        actionBtn.disabled = false;
+        cashNotification.classList.remove('hidden');
+        document.getElementById('lbl-cash-amount').innerText = `₹${booking.totalAmount}`;
+      } else if (booking.status === 'completed' && booking.paymentStatus === 'cod_collected') {
+        // Ready to review customer
+        showDriverReviewCard();
+      }
+    }
+
+    function showDriverReviewCard() {
+      document.getElementById('driver-active-job-card').classList.add('hidden');
+      document.getElementById('driver-review-card').classList.remove('hidden');
+    }
+
+    function hideDriverJobCards() {
+      document.getElementById('driver-ride-request-card').classList.add('hidden');
+      document.getElementById('driver-active-job-card').classList.add('hidden');
+    }
+
+    // DRIVER ACTIONS ON RIDE
+    async function acceptRide() {
+      if (!activeBooking) return;
+      try {
+        const res = await fetch(`${API_BASE}/bookings-accept`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${driverToken}`
+          },
+          body: JSON.stringify({ bookingId: activeBooking.id })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+
+        showToast("You accepted the ride! Proceed to pickup location.", "success");
+        activeBooking = data;
+        showDriverActiveJobCard(data);
+        
+        // Force customer to sync OTP & ETA details
+        fetchUserProfile('customer'); 
+
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    async function declineRide() {
+      if (!activeBooking) return;
+      try {
+        const res = await fetch(`${API_BASE}/bookings-decline`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${driverToken}`
+          },
+          body: JSON.stringify({ bookingId: activeBooking.id, reason: "Decline by driver test console" })
+        });
+        if (!res.ok) throw new Error("Decline failed");
+
+        showToast("Ride declined", "info");
+        activeBooking = null;
+        hideDriverJobCards();
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    async function advanceJobState() {
+      if (!activeBooking) return;
+      
+      const currentStatus = activeBooking.status;
+      try {
+        if (currentStatus === 'driver_accepted') {
+          // Arrived
+          const res = await fetch(`${API_BASE}/bookings-arrived`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${driverToken}`
+            },
+            body: JSON.stringify({ bookingId: activeBooking.id })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message);
+
+          showToast("Marked arrived. Waiting for customer to board and share OTP.", "info");
+          activeBooking = data;
+          showDriverActiveJobCard(data);
+        } 
+        else if (currentStatus === 'arrived') {
+          // Start Trip
+          const otp = document.getElementById('driver-start-otp-input').value.trim();
+          if (!otp) {
+            showToast("Enter OTP shared by the customer to start the ride", "error");
+            return;
+          }
+
+          const res = await fetch(`${API_BASE}/bookings-start`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${driverToken}`
+            },
+            body: JSON.stringify({ bookingId: activeBooking.id, otp: otp })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message);
+
+          showToast("OTP verified! Ride started. Driving to destination...", "success");
+          activeBooking = data;
+          showDriverActiveJobCard(data);
+        }
+        else if (currentStatus === 'started') {
+          // Complete Trip
+          const res = await fetch(`${API_BASE}/bookings-complete`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${driverToken}`
+            },
+            body: JSON.stringify({ bookingId: activeBooking.id })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message);
+
+          showToast("Ride completed! Collect cash from customer.", "success");
+          activeBooking = data;
+          showDriverActiveJobCard(data);
+        }
+        else if (currentStatus === 'completed' && activeBooking.paymentStatus === 'cod_due') {
+          // Mark COD Collected
+          const res = await fetch(`${API_BASE}/payments-mark-cod-collected`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${driverToken}`
+            },
+            body: JSON.stringify({ bookingId: activeBooking.id })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message);
+
+          showToast("Cash collected successfully!", "success");
+          
+          // Re-fetch booking status to move to review
+          pollForDriverBookings();
+        }
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    // REVIEWS SUBMISSION
+    async function submitCustomerReview() {
+      if (customerReviewRating === 0) {
+        showToast("Please select a star rating", "warning");
+        return;
+      }
+      const comment = document.getElementById('customer-review-comment').value.trim();
+
+      try {
+        const res = await fetch(`${API_BASE}/reviews-create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${customerToken}`
+          },
+          body: JSON.stringify({
+            bookingId: activeBooking.id,
+            rating: customerReviewRating,
+            comment: comment
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to submit review");
+
+        showToast("Review submitted successfully! Thank you.", "success");
+        
+        // Reset customer side
+        document.getElementById('customer-review-card').classList.add('hidden');
+        document.getElementById('customer-active-booking-card').classList.add('hidden');
+        resetRoute();
+        
+        // Refresh customer ratings in profile
+        fetchUserProfile('customer');
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    async function submitDriverReview() {
+      if (driverReviewRating === 0) {
+        showToast("Please select a star rating", "warning");
+        return;
+      }
+      const comment = document.getElementById('driver-review-comment').value.trim();
+
+      try {
+        const res = await fetch(`${API_BASE}/reviews-create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${driverToken}`
+          },
+          body: JSON.stringify({
+            bookingId: activeBooking.id,
+            rating: driverReviewRating,
+            comment: comment
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to submit review");
+
+        showToast("Customer review submitted successfully!", "success");
+        
+        // Reset driver side
+        document.getElementById('driver-review-card').classList.add('hidden');
+        activeBooking = null;
+        
+        // Refresh driver ratings
+        fetchUserProfile('driver');
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    // CANCEL RIDE (Customer)
+    async function cancelRide() {
+      if (!activeBooking) return;
+      try {
+        const res = await fetch(`${API_BASE}/bookings-cancel`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${customerToken}`
+          },
+          body: JSON.stringify({ bookingId: activeBooking.id, reason: "Cancelled by customer test simulator" })
+        });
+        if (!res.ok) throw new Error("Cancel failed");
+
+        showToast("Ride booking cancelled successfully", "info");
+        document.getElementById('customer-active-booking-card').classList.add('hidden');
+        resetRoute();
+        activeBooking = null;
+        stopBookingPoller();
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    // POLLING MECHANISM FOR RIDES IN BACKGROUND
+    function startBookingPoller() {
+      if (bookingPollerId) clearInterval(bookingPollerId);
+      
+      bookingPollerId = setInterval(() => {
+        // Poll for both Customer and Driver sides to synchronize state changes
+        if (customerToken && activeBooking) {
+          syncCustomerBookingState();
+        }
+        if (driverToken) {
+          pollForDriverBookings();
+        }
+      }, 3000);
+    }
+
+    function stopBookingPoller() {
+      if (bookingPollerId) {
+        clearInterval(bookingPollerId);
+        bookingPollerId = null;
+      }
+    }
+
+    async function syncCustomerBookingState() {
+      if (!activeBooking) return;
+      try {
+        const res = await fetch(`${API_BASE}/bookings-get?bookingId=${activeBooking.id}`, {
+          headers: { 'Authorization': `Bearer ${customerToken}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          activeBooking = data;
+          showCustomerBookingUI(data);
+        }
+      } catch (err) {
+        console.error("syncCustomerBookingState failed:", err);
+      }
+    }
+
+  </script>
+</body>
+</html>

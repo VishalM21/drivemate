@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriveMate - Customer App</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #161c2a;
+      --bg-tertiary: #1f293d;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --border: #2d3748;
+      --radius: 16px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 10px;
+    }
+
+    .mobile-frame {
+      width: 100%;
+      max-width: 450px;
+      height: 92vh;
+      min-height: 640px;
+      background-color: var(--bg-secondary);
+      border: 4px solid var(--border);
+      border-radius: 32px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    header {
+      padding: 16px 20px;
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.25rem;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .status-online { background-color: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .status-offline { background-color: rgba(239, 68, 68, 0.15); color: var(--error); }
+
+    .content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 18px;
+      gap: 16px;
+    }
+
+    .map-container {
+      height: 190px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    #map { height: 100%; width: 100%; }
+
+    .card {
+      background-color: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; }
+    input, textarea, select {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+
+    .btn {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn:hover { background-color: var(--accent-hover); }
+    .btn-success { background-color: var(--success); }
+    .btn-error { background-color: var(--error); }
+    .btn-secondary { background-color: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+
+    .hidden { display: none !important; }
+
+    /* Star rating */
+    .star-rating { display: flex; gap: 8px; font-size: 1.5rem; justify-content: center; }
+    .star { cursor: pointer; color: var(--text-secondary); }
+    .star.selected { color: var(--warning); }
+
+    /* Toast */
+    .toast {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      background-color: var(--bg-tertiary);
+      border-left: 4px solid var(--accent);
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      z-index: 2000;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toast-error { border-left-color: var(--error); }
+    .toast-success { border-left-color: var(--success); }
+  </style>
+</head>
+<body>
+
+  <div class="mobile-frame">
+    <header>
+      <div class="logo">DriveMate Customer</div>
+      <span class="status-badge status-offline" id="lbl-status">OFFLINE</span>
+    </header>
+
+    <div class="content-area">
+      <!-- 1. Authentication -->
+      <div class="card" id="auth-card">
+        <h3 style="font-family: 'Outfit';">Sign In / Create Account</h3>
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">Enter your phone number below to receive a secure SMS verification code.</p>
+        
+        <div class="form-group" style="margin-top: 4px;">
+          <label>Mobile Number (Include Country Code)</label>
+          <input type="tel" id="txt-phone" placeholder="+919999999999" value="+919999999999">
+        </div>
+        
+        <!-- Recaptcha Container for Firebase SDK -->
+        <div id="recaptcha-container" style="margin-top: 8px;"></div>
+        
+        <button class="btn" id="btn-send-otp">Request SMS Verification Code</button>
+
+        <div class="form-group hidden" id="otp-group" style="margin-top: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
+          <label>Enter SMS Verification Code</label>
+          <input type="text" id="txt-otp" placeholder="123456">
+          <button class="btn btn-success" style="margin-top: 8px;" id="btn-verify-otp">Verify OTP & Login</button>
+        </div>
+      </div>
+
+      <!-- 2. Onboarding (For New Users) -->
+      <div class="card hidden" id="onboarding-card">
+        <h3 style="font-family: 'Outfit';">Complete Registration</h3>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="reg-name" placeholder="John Doe">
+        </div>
+        <div class="form-group">
+          <label>Date of Birth</label>
+          <input type="date" id="reg-dob">
+        </div>
+        <div class="form-group">
+          <label>Car Name / Model</label>
+          <input type="text" id="reg-car-name" placeholder="Honda City Civic">
+        </div>
+        <div class="form-group">
+          <label>Car RC Name</label>
+          <input type="text" id="reg-car-rc" placeholder="RC-CIVIC-1">
+        </div>
+        <button class="btn btn-success" id="btn-complete-onboarding">Submit Onboarding Details</button>
+      </div>
+
+      <!-- 3. Dashboard -->
+      <div class="hidden" id="dashboard" style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Profile Card -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: bold; font-size: 1.05rem;" id="lbl-profile-name">---</div>
+            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" id="btn-edit-toggle">Edit Car</button>
+          </div>
+          <div id="profile-car-details" style="font-size: 0.85rem; color: var(--text-secondary);">
+            <div>Car: <span id="lbl-car-name" style="color: var(--text-primary); font-weight: 500;">---</span></div>
+            <div>RC: <span id="lbl-car-rc" style="color: var(--text-primary); font-weight: 500;">---</span></div>
+            <div style="margin-top: 4px;" id="lbl-profile-rating">Rating: ⭐ ---</div>
+          </div>
+          
+          <!-- Edit Form -->
+          <div class="hidden" id="profile-edit-form" style="display: flex; flex-direction: column; gap: 8px;">
+            <input type="text" id="txt-edit-car" placeholder="Car Name">
+            <input type="text" id="txt-edit-rc" placeholder="Car RC Name">
+            <button class="btn btn-success" id="btn-save-profile" style="padding: 6px;">Save Details</button>
+          </div>
+        </div>
+
+        <!-- Address Search & Locate Row -->
+        <div class="card" style="padding: 10px; gap: 8px; border-color: var(--border);">
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="txt-map-search" placeholder="Type location (e.g. Kanpur)..." style="flex: 1; padding: 8px; font-size: 0.85rem;">
+            <button class="btn btn-secondary" id="btn-map-search" style="padding: 8px 12px; font-size: 0.85rem;">Search</button>
+          </div>
+          <button class="btn btn-secondary" id="btn-current-loc" style="padding: 6px; font-size: 0.8rem; border-color: var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; gap: 6px;">
+            📍 Use Current Location
+          </button>
+        </div>
+
+        <!-- Map Section -->
+        <div class="map-container">
+          <div id="map"></div>
+        </div>
+
+        <!-- Booking Panel -->
+        <div class="card" id="booking-panel">
+          <h4 style="font-family: 'Outfit';">Set Your Trip</h4>
+          <p style="font-size: 0.8rem; color: var(--text-secondary);">Tap map once to set <b>Pickup</b>, tap again to set <b>Drop</b>.</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem;">
+            <div>Pickup: <span id="lbl-pickup" style="font-weight: bold;">Not Set</span></div>
+            <div>Drop: <span id="lbl-drop" style="font-weight: bold;">Not Set</span></div>
+          </div>
+          <button class="btn" id="btn-search-drivers">Search Nearby Drivers</button>
+          
+          <div class="hidden" id="driver-list-section" style="max-height: 180px; overflow-y: auto; margin-top: 8px;">
+            <h5 style="margin-bottom: 6px; font-size: 0.8rem; text-transform: uppercase;">Available Drivers:</h5>
+            <div id="driver-list" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Dynamic content -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Ride Panel -->
+        <div class="card hidden" id="ride-status-card">
+          <div style="display: flex; justify-content: space-between;">
+            <h4 style="font-family: 'Outfit';">Ride Status</h4>
+            <span class="status-badge status-online" id="lbl-ride-status" style="background-color: var(--warning); color: #000;">PENDING</span>
+          </div>
+          <div style="padding: 8px; background-color: var(--bg-primary); border-radius: 8px; font-size: 0.85rem;">
+            <div id="lbl-ride-driver">Driver: ---</div>
+            <div id="lbl-ride-amount">Amount: ₹---</div>
+            <div style="font-weight: bold; color: var(--warning); margin-top: 4px;" class="hidden" id="otp-display-box">
+              RIDE OTP: <span id="lbl-ride-otp">----</span>
+            </div>
+            <div style="font-weight: bold; color: var(--success);" class="hidden" id="eta-display-box">
+              ETA: <span id="lbl-ride-eta">--</span> mins
+            </div>
+          </div>
+          <button class="btn btn-error" id="btn-cancel-ride">Cancel Booking</button>
+        </div>
+
+        <!-- Review Panel -->
+        <div class="card hidden" id="review-card">
+          <h4 style="font-family: 'Outfit';">Rate Driver</h4>
+          <p style="font-size: 0.85rem;">Rate your ride experience:</p>
+          <div class="star-rating" id="review-stars">
+            <span class="star" data-val="1">★</span>
+            <span class="star" data-val="2">★</span>
+            <span class="star" data-val="3">★</span>
+            <span class="star" data-val="4">★</span>
+            <span class="star" data-val="5">★</span>
+          </div>
+          <textarea id="txt-comment" placeholder="Leave comments..." rows="2"></textarea>
+          <button class="btn btn-success" id="btn-submit-review">Submit Review</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-el" class="toast hidden">
+    <span id="toast-text">Message</span>
+    <span style="cursor:pointer;" onclick="hideToast()">&times;</span>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Firebase SDK Modules -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const HOST_API = window.location.origin + "/functions/v1";
+    let token = localStorage.getItem('customerToken');
+    let userObj = null;
+    let map, pickupMarker, dropMarker, routeLine;
+    let pickupCoords = null, dropCoords = null;
+    let activeBooking = null;
+    let pollId = null;
+    let reviewRating = 0;
+
+    // Firebase state
+    let firebaseApp = null;
+    let firebaseAuth = null;
+    let confirmationResult = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      setupEvents();
+      loadFirebaseConfig();
+      if (token) {
+        fetchProfile();
+      }
+    });
+
+    function showToast(text, isError = false) {
+      const toast = document.getElementById('toast-el');
+      toast.className = `toast ${isError ? 'toast-error' : 'toast-success'}`;
+      document.getElementById('toast-text').innerText = text;
+      toast.classList.remove('hidden');
+      setTimeout(hideToast, 5000);
+    }
+    window.hideToast = () => { document.getElementById('toast-el').classList.add('hidden'); }
+
+    // Firebase Config Logic
+    async function loadFirebaseConfig() {
+      try {
+        const res = await fetch(`${HOST_API}/firebase-config`);
+        const wrapper = await res.json();
+        if (res.ok && wrapper && wrapper.success && wrapper.data && wrapper.data.apiKey) {
+          console.log("Loaded Firebase Web config dynamically from backend!");
+          tryInitFirebase(wrapper.data);
+        } else {
+          showToast("Firebase Config not configured on backend .env", true);
+        }
+      } catch (err) {
+        showToast("Failed to fetch Firebase Config from Deno", true);
+        console.error(err);
+      }
+    }
+
+    function tryInitFirebase(config) {
+      try {
+        firebaseApp = initializeApp(config);
+        firebaseAuth = getAuth(firebaseApp);
+        console.log("Firebase client SDK initialized successfully.");
+      } catch (err) {
+        console.error("Firebase init failed:", err);
+        showToast("Invalid Firebase Configuration: Check console", true);
+      }
+    }
+
+    function setupEvents() {
+      document.getElementById('btn-send-otp').addEventListener('click', sendVerificationCode);
+      document.getElementById('btn-verify-otp').addEventListener('click', verifyCode);
+      document.getElementById('btn-complete-onboarding').addEventListener('click', completeOnboarding);
+      document.getElementById('btn-edit-toggle').addEventListener('click', toggleEditForm);
+      document.getElementById('btn-save-profile').addEventListener('click', saveCarDetails);
+      document.getElementById('btn-search-drivers').addEventListener('click', searchDrivers);
+      document.getElementById('btn-cancel-ride').addEventListener('click', cancelRide);
+      document.getElementById('btn-submit-review').addEventListener('click', submitReview);
+      
+      // Location utility buttons
+      document.getElementById('btn-map-search').addEventListener('click', searchAddress);
+      document.getElementById('btn-current-loc').addEventListener('click', useCurrentLocation);
+
+      // Stars
+      const stars = document.querySelectorAll('#review-stars .star');
+      stars.forEach(s => {
+        s.addEventListener('click', (e) => {
+          reviewRating = parseInt(e.target.dataset.val);
+          stars.forEach(st => {
+            st.classList.toggle('selected', parseInt(st.dataset.val) <= reviewRating);
+          });
+        });
+      });
+    }
+
+    // Geocoding and geolocation functions
+    async function searchAddress() {
+      const query = document.getElementById('txt-map-search').value.trim();
+      if (!query) {
+        showToast("Enter address to search", true);
+        return;
+      }
+      showToast("Searching address...", false);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (data.length === 0) {
+          showToast("Address not found", true);
+          return;
+        }
+        const first = data[0];
+        const lat = parseFloat(first.lat);
+        const lon = parseFloat(first.lon);
+        const latlng = L.latLng(lat, lon);
+        
+        map.setView(latlng, 14);
+        
+        if (!pickupCoords) {
+          pickupCoords = latlng;
+          document.getElementById('lbl-pickup').innerText = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+          pickupMarker = L.marker(pickupCoords).addTo(map).bindPopup(`Pickup: ${first.display_name}`).openPopup();
+          showToast(`Pickup set to: ${first.display_name}`);
+        } else if (!dropCoords) {
+          dropCoords = latlng;
+          document.getElementById('lbl-drop').innerText = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+          dropMarker = L.marker(dropCoords, {
+            icon: L.icon({
+              iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
+              iconSize: [25, 25]
+            })
+          }).addTo(map).bindPopup(`Drop: ${first.display_name}`).openPopup();
+          routeLine = L.polyline([pickupCoords, dropCoords], { color: '#3b82f6', dashArray: '5, 5' }).addTo(map);
+          showToast(`Drop set to: ${first.display_name}`);
+        } else {
+          resetRoutePoints();
+          pickupCoords = latlng;
+          document.getElementById('lbl-pickup').innerText = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+          pickupMarker = L.marker(pickupCoords).addTo(map).bindPopup(`Pickup: ${first.display_name}`).openPopup();
+          showToast(`Pickup set to: ${first.display_name}`);
+        }
+      } catch (err) {
+        showToast("Search failed: " + err.message, true);
+      }
+    }
+
+    function useCurrentLocation() {
+      if (!navigator.geolocation) {
+        showToast("Geolocation is not supported by your browser", true);
+        return;
+      }
+      showToast("Fetching current location...", false);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          const latlng = L.latLng(lat, lon);
+          
+          map.setView(latlng, 15);
+          
+          if (pickupMarker) map.removeLayer(pickupMarker);
+          pickupCoords = latlng;
+          document.getElementById('lbl-pickup').innerText = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+          pickupMarker = L.marker(pickupCoords).addTo(map).bindPopup("Current Location (Pickup)").openPopup();
+          showToast("Pickup set to current location!");
+        },
+        (error) => {
+          showToast("Geolocation error: " + error.message, true);
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    // AUTH ACTIONS
+    async function sendVerificationCode() {
+      const phone = document.getElementById('txt-phone').value.trim();
+
+      if (!phone) {
+        showToast("Enter a valid phone number", true);
+        return;
+      }
+
+      if (!firebaseAuth) {
+        showToast("Firebase Auth client SDK has not loaded yet. Check backend .env configuration.", true);
+        return;
+      }
+
+      showToast("Initializing Recaptcha verifier...", false);
+      try {
+        document.getElementById('recaptcha-container').innerHTML = '<div id="interactive-recaptcha"></div>';
+        
+        window.recaptchaVerifier = new RecaptchaVerifier(firebaseAuth, 'interactive-recaptcha', {
+          size: 'normal',
+          callback: () => {
+            console.log("Recaptcha verified!");
+          }
+        });
+
+        const result = await signInWithPhoneNumber(firebaseAuth, phone, window.recaptchaVerifier);
+        confirmationResult = result;
+        
+        document.getElementById('otp-group').classList.remove('hidden');
+        showToast("Real SMS verification code dispatched to your phone!", false);
+      } catch (err) {
+        showToast("Firebase Auth Dispatch Error: " + err.message, true);
+        console.error(err);
+      }
+    }
+
+    async function verifyCode() {
+      const code = document.getElementById('txt-otp').value.trim();
+
+      if (!code) {
+        showToast("Please enter the verification code", true);
+        return;
+      }
+
+      try {
+        if (!confirmationResult) {
+          showToast("Verify flow broken: Request OTP again", true);
+          return;
+        }
+        showToast("Verifying code against Firebase...", false);
+        const userCred = await confirmationResult.confirm(code);
+        const firebaseToken = await userCred.user.getIdToken();
+
+        showToast("Verifying Firebase ID Token on Backend...", false);
+        const res = await fetch(`${HOST_API}/auth-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ firebaseIdToken: firebaseToken })
+        });
+        const wrapper = await res.json();
+        
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Backend rejected token");
+
+        const data = wrapper.data;
+        if (data.isNewUser) {
+          userObj = { phone: data.phone, firebaseUid: data.firebaseUid };
+          document.getElementById('auth-card').classList.add('hidden');
+          document.getElementById('onboarding-card').classList.remove('hidden');
+          showToast("Phone verified! Fill onboarding profile.", false);
+        } else {
+          token = data.accessToken;
+          localStorage.setItem('customerToken', token);
+          showToast("Logged in successfully!", false);
+          fetchProfile();
+        }
+      } catch (err) {
+        showToast(err.message, true);
+        console.error(err);
+      }
+    }
+
+    async function completeOnboarding() {
+      const name = document.getElementById('reg-name').value.trim();
+      const dob = document.getElementById('reg-dob').value;
+      const carName = document.getElementById('reg-car-name').value.trim();
+      const carRc = document.getElementById('reg-car-rc').value.trim();
+
+      if (!name || !dob || !carName || !carRc) {
+        showToast("Fill in all profile fields", true);
+        return;
+      }
+
+      try {
+        const firebaseToken = await firebaseAuth.currentUser.getIdToken();
+        
+        const res = await fetch(`${HOST_API}/auth-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firebaseIdToken: firebaseToken,
+            role: 'customer',
+            fullName: name,
+            dob, carName, carRcName: carRc
+          })
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Onboarding failed");
+
+        token = wrapper.data.accessToken;
+        localStorage.setItem('customerToken', token);
+        document.getElementById('onboarding-card').classList.add('hidden');
+        showToast("Customer profile created!", false);
+        fetchProfile();
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    // Leaflet map setup
+    function initMap() {
+      map = L.map('map').setView([26.4499, 80.3319], 13);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+      map.on('click', (e) => {
+        if (!pickupCoords) {
+          pickupCoords = e.latlng;
+          document.getElementById('lbl-pickup').innerText = `${pickupCoords.lat.toFixed(4)}, ${pickupCoords.lng.toFixed(4)}`;
+          pickupMarker = L.marker(pickupCoords).addTo(map).bindPopup("Pickup").openPopup();
+        } else if (!dropCoords) {
+          dropCoords = e.latlng;
+          document.getElementById('lbl-drop').innerText = `${dropCoords.lat.toFixed(4)}, ${dropCoords.lng.toFixed(4)}`;
+          dropMarker = L.marker(dropCoords, {
+            icon: L.icon({
+              iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
+              iconSize: [25, 25]
+            })
+          }).addTo(map).bindPopup("Drop").openPopup();
+          routeLine = L.polyline([pickupCoords, dropCoords], { color: '#3b82f6', dashArray: '5, 5' }).addTo(map);
+        } else {
+          resetRoutePoints();
+          pickupCoords = e.latlng;
+          document.getElementById('lbl-pickup').innerText = `${pickupCoords.lat.toFixed(4)}, ${pickupCoords.lng.toFixed(4)}`;
+          pickupMarker = L.marker(pickupCoords).addTo(map).bindPopup("Pickup").openPopup();
+        }
+      });
+    }
+
+    async function fetchProfile() {
+      if (!token || token === "null" || token === "undefined") {
+        localStorage.removeItem('customerToken');
+        token = null;
+        document.getElementById('auth-card').classList.remove('hidden');
+        document.getElementById('dashboard').classList.add('hidden');
+        return;
+      }
+      try {
+        const res = await fetch(`${HOST_API}/auth-me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) {
+          localStorage.removeItem('customerToken');
+          token = null;
+          document.getElementById('auth-card').classList.remove('hidden');
+          document.getElementById('dashboard').classList.add('hidden');
+          return;
+        }
+
+        const data = wrapper.data;
+        userObj = data;
+        document.getElementById('lbl-status').innerText = "ACTIVE";
+        document.getElementById('lbl-status').className = "status-badge status-online";
+        document.getElementById('auth-card').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+
+        document.getElementById('lbl-profile-name').innerText = data.fullName;
+        document.getElementById('lbl-car-name').innerText = data.carName || "None";
+        document.getElementById('lbl-car-rc').innerText = data.carRcName || "None";
+        document.getElementById('lbl-profile-rating').innerText = `Rating: ⭐ ${data.ratingAsCustomer || '5.0'} (${data.totalTripsAsCustomer || 0} trips)`;
+
+        document.getElementById('txt-edit-car').value = data.carName || '';
+        document.getElementById('txt-edit-rc').value = data.carRcName || '';
+
+        startPoller();
+      } catch (err) { console.error("fetchProfile err", err); }
+    }
+
+    function toggleEditForm() {
+      const form = document.getElementById('profile-edit-form');
+      const det = document.getElementById('profile-car-details');
+      const hidden = form.classList.contains('hidden');
+      form.classList.toggle('hidden', !hidden);
+      det.classList.toggle('hidden', hidden);
+    }
+
+    async function saveCarDetails() {
+      const carName = document.getElementById('txt-edit-car').value.trim();
+      const carRc = document.getElementById('txt-edit-rc').value.trim();
+      try {
+        const res = await fetch(`${HOST_API}/users-profile`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ carName, carRcName: carRc })
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Failed to update profile");
+        showToast("Car details updated!");
+        toggleEditForm();
+        fetchProfile();
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    async function searchDrivers() {
+      if (!pickupCoords || !dropCoords) {
+        showToast("Specify pickup and drop coordinates first", true);
+        return;
+      }
+      const listDiv = document.getElementById('driver-list');
+      listDiv.innerHTML = "<em>Searching for online drivers...</em>";
+      document.getElementById('driver-list-section').classList.remove('hidden');
+
+      try {
+        const res = await fetch(`${HOST_API}/drivers-nearby?latitude=${pickupCoords.lat}&longitude=${pickupCoords.lng}&dropLatitude=${dropCoords.lat}&dropLongitude=${dropCoords.lng}&radiusKm=30`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Search failed");
+
+        const drivers = wrapper.data.drivers || [];
+        if (drivers.length === 0) {
+          listDiv.innerHTML = '<span style="color: var(--error); font-size: 0.85rem;">No online drivers found. Make sure a driver is ONLINE.</span>';
+          return;
+        }
+
+        listDiv.innerHTML = "";
+        drivers.forEach(d => {
+          const div = document.createElement('div');
+          div.style = "background: var(--bg-primary); padding: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border);";
+          div.innerHTML = `
+            <div>
+              <div style="font-weight:bold; font-size: 0.85rem; color: var(--success);">${d.name}</div>
+              <div style="font-size:0.75rem; color: var(--text-secondary);">⭐ ${d.rating} | ${d.distanceKm} km away</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: 700; font-size: 0.95rem; color: var(--accent);">₹${d.tripFare}</div>
+              <button class="btn" style="padding: 4px 8px; font-size: 0.75rem; margin-top: 4px;" onclick="window.bookRide('${d.id}')">Request</button>
+            </div>
+          `;
+          listDiv.appendChild(div);
+        });
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    window.bookRide = async function(driverId) {
+      try {
+        const res = await fetch(`${HOST_API}/bookings-create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            driverId,
+            serviceType: 'local',
+            pickupLatitude: pickupCoords.lat,
+            pickupLongitude: pickupCoords.lng,
+            dropLatitude: dropCoords.lat,
+            dropLongitude: dropCoords.lng,
+            vehicleNumber: userObj.carName || "MH-12-AB-1234"
+          })
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Booking creation failed");
+
+        showToast("Ride requested successfully!");
+        activeBooking = wrapper.data;
+        document.getElementById('booking-panel').classList.add('hidden');
+        document.getElementById('driver-list-section').classList.add('hidden');
+        updateBookingUI(wrapper.data);
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    function updateBookingUI(booking) {
+      const card = document.getElementById('ride-status-card');
+      card.classList.remove('hidden');
+
+      document.getElementById('lbl-ride-status').innerText = booking.status.toUpperCase();
+      document.getElementById('lbl-ride-driver').innerText = `Driver: Assigned`;
+      document.getElementById('lbl-ride-amount').innerText = `Amount: ₹${booking.totalAmount}`;
+
+      const otpBox = document.getElementById('otp-display-box');
+      const etaBox = document.getElementById('eta-display-box');
+
+      if (['driver_accepted', 'arrived', 'started'].includes(booking.status)) {
+        otpBox.classList.remove('hidden');
+        etaBox.classList.remove('hidden');
+        document.getElementById('lbl-ride-otp').innerText = userObj.rideOtp || booking.otp || "----";
+        document.getElementById('lbl-ride-eta').innerText = booking.eta || "5";
+      } else {
+        otpBox.classList.add('hidden');
+        etaBox.classList.add('hidden');
+      }
+
+      if (booking.status === 'completed') {
+        card.classList.add('hidden');
+        document.getElementById('review-card').classList.remove('hidden');
+      }
+      if (booking.status === 'cancelled') {
+        card.classList.add('hidden');
+        document.getElementById('booking-panel').classList.remove('hidden');
+        showToast("Booking was cancelled.", true);
+        activeBooking = null;
+      }
+    }
+
+    async function cancelRide() {
+      if (!activeBooking) return;
+      try {
+        const res = await fetch(`${HOST_API}/bookings-cancel`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ bookingId: activeBooking.id })
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Cancel failed");
+        showToast("Booking cancelled.");
+        activeBooking = null;
+        document.getElementById('ride-status-card').classList.add('hidden');
+        document.getElementById('booking-panel').classList.remove('hidden');
+        resetRoutePoints();
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    function resetRoutePoints() {
+      if (pickupMarker) map.removeLayer(pickupMarker);
+      if (dropMarker) map.removeLayer(dropMarker);
+      if (routeLine) map.removeLayer(routeLine);
+      pickupCoords = null;
+      dropCoords = null;
+      document.getElementById('lbl-pickup').innerText = "Not Set";
+      document.getElementById('lbl-drop').innerText = "Not Set";
+    }
+
+    async function submitReview() {
+      if (reviewRating === 0) {
+        showToast("Select stars", true);
+        return;
+      }
+      const comment = document.getElementById('txt-comment').value.trim();
+      try {
+        const res = await fetch(`${HOST_API}/reviews-create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            bookingId: activeBooking.id,
+            rating: reviewRating,
+            comment
+          })
+        });
+        const wrapper = await res.json();
+        if (!res.ok || !wrapper.success) throw new Error(wrapper.error?.message || "Submit review failed");
+        showToast("Review submitted successfully!");
+        document.getElementById('review-card').classList.add('hidden');
+        document.getElementById('booking-panel').classList.remove('hidden');
+        activeBooking = null;
+        resetRoutePoints();
+        fetchProfile();
+      } catch (err) { showToast(err.message, true); }
+    }
+
+    function startPoller() {
+      if (pollId) clearInterval(pollId);
+      pollId = setInterval(async () => {
+        if (!token) return;
+        try {
+          const res = await fetch(`${HOST_API}/bookings-history`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const wrapper = await res.json();
+          if (res.ok && wrapper.success) {
+            const bookings = wrapper.data.bookings || [];
+            const active = bookings.find(b => ['pending', 'driver_accepted', 'arrived', 'started', 'completed'].includes(b.status));
+            
+            if (active) {
+              const detRes = await fetch(`${HOST_API}/bookings-get?bookingId=${active.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              const detWrapper = await detRes.json();
+              if (detRes.ok && detWrapper.success) {
+                activeBooking = detWrapper.data;
+                updateBookingUI(detWrapper.data);
+              }
+            } else if (activeBooking) {
+              activeBooking = null;
+              document.getElementById('ride-status-card').classList.add('hidden');
+              document.getElementById('review-card').classList.add('hidden');
+              document.getElementById('booking-panel').classList.remove('hidden');
+            }
+          }
+        } catch (e) {}
+      }, 4000);
+    }
+  </script>
+</body>
+</html>

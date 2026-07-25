@@ -1,0 +1,18 @@
+export const colors = {
+  brand: '#0F62FE',
+  brandLight: '#4589FF',
+  brandDark: '#0043CE',
+  customer: '#0F62FE',
+  driver: '#12805C',
+  surface: '#FFFFFF',
+  surfaceDark: '#111318',
+  textPrimary: '#111318',
+  textSecondary: '#6B7280',
+  border: '#E5E7EB',
+  muted: '#6B7280',
+  danger: '#DC2626',
+  success: '#12805C',
+  warning: '#D97706',
+  white: '#FFFFFF',
+  black: '#000000',
+} as const;

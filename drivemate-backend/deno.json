@@ -1,0 +1,10 @@
+{
+  "tasks": {
+    "test": "deno test --allow-env tests/",
+    "check": "deno check supabase/functions/**/index.ts"
+  },
+  "compilerOptions": {
+    "strict": true
+  },
+  "lint": { "rules": { "exclude": ["no-explicit-any"] } }
+}
