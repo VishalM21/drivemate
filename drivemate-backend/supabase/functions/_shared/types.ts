@@ -31,6 +31,7 @@ export interface BookingRow {
   drop_address: string | null; drop_latitude: number | null; drop_longitude: number | null;
   scheduled_at: string | null; started_at: string | null; completed_at: string | null; cancelled_at: string | null;
   status: string; driver_fee: number; platform_fee: number; tax_amount: number; total_amount: number;
+  surge_multiplier: number;
   payment_status: string; payment_method: string; cancellation_reason: string | null;
   created_at: string; updated_at: string;
 }

@@ -1,13 +1,18 @@
 import type { PropsWithChildren } from 'react';
-import { KeyboardAvoidingView, Platform, View, useColorScheme } from 'react-native';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
 
 interface ScreenContainerProps extends PropsWithChildren {
   className?: string;
 }
 
 export function ScreenContainer({ children, className }: ScreenContainerProps) {
-  const isDark = useColorScheme() === 'dark';
+  // Nativewind's own hook, not React Native's raw one — this is the same
+  // source of truth that drives every `dark:` className in the app, so this
+  // screen's background can never disagree with its own children.
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const backgroundColor = isDark ? '#0B0C10' : '#FAFAFC';
 
   return (

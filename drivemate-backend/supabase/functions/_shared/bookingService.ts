@@ -4,6 +4,7 @@ import type { Notifier } from "./notify.ts";
 import { badRequest, conflict, forbidden, notFound } from "./errors.ts";
 import { bookingToApi } from "./mappers.ts";
 import { calculateFare, etaMinutes, haversineKm, ServiceType } from "./fareCalculator.ts";
+import { computeSurgeMultiplier } from "./dynamicPricing.ts";
 import type { BookingRow } from "./types.ts";
 
 const SERVICE_TYPES = ["local", "outstation", "airport", "monthly"];
@@ -100,10 +101,20 @@ export async function createBooking(db: Db, notify: Notifier, auth: AuthUser, bo
       ? haversineKm(pickupLatitude, pickupLongitude, dropLatitude, dropLongitude)
       : 0;
 
+  // Priced fresh at booking time (not the driver's own rate — drivers don't
+  // set price anymore). This can differ slightly from what nearby-drivers
+  // quoted a few seconds earlier if demand shifted; acceptable for now, see
+  // dynamicPricing.ts if you want to lock a quote instead.
+  const surgeMultiplier = await computeSurgeMultiplier(db, {
+    latitude: pickupLatitude,
+    longitude: pickupLongitude,
+    serviceType,
+  });
+
   const fare = calculateFare({
     serviceType: serviceType as ServiceType,
-    pricePerTrip: Number(driver.price_per_trip),
     distanceKm,
+    surgeMultiplier,
   });
 
   const booking = await db.insertBooking({
@@ -125,6 +136,7 @@ export async function createBooking(db: Db, notify: Notifier, auth: AuthUser, bo
     platform_fee: fare.platformFee,
     tax_amount: fare.taxAmount,
     total_amount: fare.totalAmount,
+    surge_multiplier: surgeMultiplier,
     payment_status: "pending",
     payment_method: "cod",
   });

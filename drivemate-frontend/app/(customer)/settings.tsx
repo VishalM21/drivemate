@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { InteractionManager, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { showAlert } from '@/utils/alert';
 
-import { Button, ScreenContainer, TextField } from '@/components/common';
+import { Button, ScreenContainer, TextField, ThemeToggle } from '@/components/common';
 import { useAuthSession } from '@/hooks/common';
 import { useAuthStore } from '@/store/authStore';
 import { fetchCurrentUser, updateUserProfile } from '@/services/common/authService';
@@ -153,6 +153,16 @@ export default function CustomerSettingsScreen() {
               onPress={() => vehicleMutation.mutate()}
               isLoading={vehicleMutation.isPending}
             />
+          </View>
+        </View>
+
+        {/* Appearance Group */}
+        <View className="gap-2.5">
+          <Text className="text-xs font-bold text-textSecondary dark:text-gray-400 uppercase tracking-widest pl-1">
+            Appearance
+          </Text>
+          <View className="bg-white dark:bg-[#161823] rounded-3xl border border-gray-100 dark:border-[#2C2E3E] shadow-sm p-3">
+            <ThemeToggle />
           </View>
         </View>
 

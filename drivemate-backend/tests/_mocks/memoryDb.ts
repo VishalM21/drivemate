@@ -160,6 +160,14 @@ export class MemoryDb implements Db {
     return this.bookings.filter((b) => b.driver_id === driverId && b.status === "completed" && b.payment_status === "paid");
   }
 
+  async countPendingBookingsNear(lat: number, lng: number, radiusKm: number) {
+    return this.bookings.filter((b) => {
+      if (!["pending", "driver_notified"].includes(b.status)) return false;
+      if (b.pickup_latitude == null || b.pickup_longitude == null) return false;
+      return haversineKm(lat, lng, b.pickup_latitude, b.pickup_longitude) <= radiusKm;
+    }).length;
+  }
+
   async insertBookingEvent(e: any) { this.events.push({ id: uuid(), created_at: now(), ...e }); }
 
   async insertPayment(p: Partial<PaymentRow>) {

@@ -4,6 +4,7 @@ import { badRequest, forbidden, notFound } from "./errors.ts";
 import { driverToApi, nearbyDriverToApi } from "./mappers.ts";
 
 import { calculateFare, haversineKm } from "./fareCalculator.ts";
+import { computeSurgeMultiplier } from "./dynamicPricing.ts";
 
 export async function nearbyDrivers(
   db: Db,
@@ -33,18 +34,25 @@ export async function nearbyDrivers(
     tripDistanceKm = haversineKm(lat, lng, dropLat, dropLng);
   }
 
+  // One surge read for the whole search — it's about the pickup area, not
+  // any individual driver, so every driver in this list quotes the same rate.
+  const surgeMultiplier = tripDistanceKm > 0
+    ? await computeSurgeMultiplier(db, { latitude: lat, longitude: lng, serviceType: serviceType || "local" })
+    : 1;
+
   const mappedDrivers = rows.map((r) => {
     const apiDriver = nearbyDriverToApi(r);
     if (tripDistanceKm > 0) {
       const fareInfo = calculateFare({
         serviceType: (serviceType || "local") as any,
-        pricePerTrip: r.price_per_trip,
         distanceKm: tripDistanceKm,
+        surgeMultiplier,
       });
       return {
         ...apiDriver,
         tripDistanceKm: Math.round(tripDistanceKm * 10) / 10,
         tripFare: fareInfo.totalAmount,
+        surgeMultiplier,
       };
     }
     return apiDriver;
@@ -59,8 +67,10 @@ async function ownDriver(db: Db, auth: AuthUser) {
   return driver;
 }
 
+// Note: no pricePerTrip here — drivers don't set their own price, dynamic
+// pricing (dynamicPricing.ts) prices every trip. Even if a client sends it,
+// it's silently ignored since it's not in this map.
 const PROFILE_FIELDS: Record<string, string> = {
-  pricePerTrip: "price_per_trip",
   experienceYears: "experience_years",
   languages: "languages",
   licenseNumber: "license_number",
@@ -83,7 +93,6 @@ export async function upsertProfile(db: Db, auth: AuthUser, body: Record<string,
     return driverToApi(await db.updateDriver(existing.id, patch));
   }
   // first-time profile creation
-  if (patch.price_per_trip === undefined) throw badRequest("pricePerTrip is required to create a driver profile");
   if (patch.license_number === undefined) throw badRequest("licenseNumber is required to create a driver profile");
   const created = await db.createDriver({ user_id: auth.id, is_verified: true, is_available: false, ...patch });
   return driverToApi(created);

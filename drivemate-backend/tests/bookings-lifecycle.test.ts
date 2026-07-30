@@ -5,7 +5,8 @@ import {
   createBooking, acceptBooking, markArrived, startTrip, completeTrip, cancelBooking, declineBooking,
 } from "../supabase/functions/_shared/bookingService.ts";
 import {
-  AIRPORT_SURCHARGE, PLATFORM_FEE_RATE, TAX_RATE, calculateFare,
+  AIRPORT_SURCHARGE, BASE_FARE, OUTSTATION_BASE_FARE, PER_KM_OUTSTATION_RATE, PER_KM_RATE,
+  PLATFORM_FEE_RATE, TAX_RATE, calculateFare, haversineKm,
 } from "../supabase/functions/_shared/fareCalculator.ts";
 import { ApiError } from "../supabase/functions/_shared/errors.ts";
 
@@ -20,11 +21,16 @@ Deno.test("customer creates booking: fare math, payment row, event, vehicle upse
   const w = makeWorld();
   const b = await createBooking(w.db, mockNotifier, asAuth(w.customer), body(w.driver.id));
 
-  // fare: local => driverFee = 400, platform 10%, tax 18% of platform
-  assertEquals(b.driverFee, 400);
-  assertEquals(b.platformFee, 400 * PLATFORM_FEE_RATE);
-  assertEquals(b.taxAmount, Math.round(400 * PLATFORM_FEE_RATE * TAX_RATE * 100) / 100);
-  assertEquals(b.totalAmount, 400 + 40 + 7.2);
+  // fare: platform base rate (no driver-set price anymore) + surge (1x here
+  // — no competing demand/supply in this isolated test world), platform 10%,
+  // tax 18% of platform.
+  const distanceKm = haversineKm(26.4499, 80.3319, 26.47, 80.35);
+  const expectedDriverFee = Math.round((BASE_FARE + distanceKm * PER_KM_RATE) * 100) / 100;
+  assertEquals(b.driverFee, expectedDriverFee);
+  assertEquals(b.surgeMultiplier, 1);
+  assertEquals(b.platformFee, Math.round(expectedDriverFee * PLATFORM_FEE_RATE * 100) / 100);
+  assertEquals(b.taxAmount, Math.round(b.platformFee * TAX_RATE * 100) / 100);
+  assertEquals(b.totalAmount, Math.round((b.driverFee + b.platformFee + b.taxAmount) * 100) / 100);
   assertEquals(b.status, "pending");
   assertEquals(b.paymentStatus, "pending");
   assertEquals(b.paymentMethod, "cod");
@@ -46,12 +52,23 @@ Deno.test("customer creates booking: fare math, payment row, event, vehicle upse
 });
 
 Deno.test("airport fare adds surcharge; fare calculator branches", () => {
-  const airport = calculateFare({ serviceType: "airport", pricePerTrip: 400 });
-  assertEquals(airport.driverFee, 400 + AIRPORT_SURCHARGE);
-  const outstation = calculateFare({ serviceType: "outstation", pricePerTrip: 400, distanceKm: 100 });
-  assertEquals(outstation.driverFee, 400 + 100 * 12);
-  const monthly = calculateFare({ serviceType: "monthly", pricePerTrip: 400 });
+  const airport = calculateFare({ serviceType: "airport", distanceKm: 10 });
+  assertEquals(airport.driverFee, BASE_FARE + AIRPORT_SURCHARGE + 10 * PER_KM_RATE);
+  const outstation = calculateFare({ serviceType: "outstation", distanceKm: 100 });
+  assertEquals(outstation.driverFee, OUTSTATION_BASE_FARE + 100 * PER_KM_OUTSTATION_RATE);
+  const monthly = calculateFare({ serviceType: "monthly", distanceKm: 999 });
   assertEquals(monthly.driverFee, 15000);
+});
+
+Deno.test("surge multiplier scales the driver fare but not monthly", () => {
+  const surged = calculateFare({ serviceType: "local", distanceKm: 10, surgeMultiplier: 1.5 });
+  const base = calculateFare({ serviceType: "local", distanceKm: 10 });
+  assertEquals(surged.driverFee, Math.round(base.driverFee * 1.5 * 100) / 100);
+  const monthlySurged = calculateFare({ serviceType: "monthly", surgeMultiplier: 2 });
+  assertEquals(monthlySurged.driverFee, 15000); // monthly is flat, never surged
+  // surge multiplier can't go below 1x (no "discount surge")
+  const floored = calculateFare({ serviceType: "local", distanceKm: 10, surgeMultiplier: 0.5 });
+  assertEquals(floored.driverFee, base.driverFee);
 });
 
 Deno.test("booking creation guards: role, driver validity", async () => {

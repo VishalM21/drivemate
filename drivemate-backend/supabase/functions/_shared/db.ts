@@ -39,6 +39,8 @@ export interface Db {
   listBookingsByCustomer(customerId: string): Promise<BookingRow[]>;
   listBookingsByDriver(driverId: string): Promise<BookingRow[]>;
   listCompletedCollectedByDriver(driverId: string): Promise<BookingRow[]>;
+  // Demand side of the surge ratio — see dynamicPricing.ts.
+  countPendingBookingsNear(lat: number, lng: number, radiusKm: number): Promise<number>;
 
   // booking events
   insertBookingEvent(e: {

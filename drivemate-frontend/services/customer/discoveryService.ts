@@ -11,6 +11,8 @@ export function fetchNearbyDrivers(
         longitude: query.longitude,
         radiusKm: query.radiusKm,
         serviceType: query.serviceType,
+        dropLatitude: query.dropLatitude,
+        dropLongitude: query.dropLongitude,
       },
     }),
   );

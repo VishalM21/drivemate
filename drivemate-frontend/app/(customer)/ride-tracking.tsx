@@ -6,9 +6,11 @@ import {
   ActivityIndicator,
   Linking,
   Pressable,
+  ScrollView,
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { showAlert } from '@/utils/alert';
 import Animated, { SlideInDown } from 'react-native-reanimated';
 import { Button, ScreenContainer, AnimatedMarker, FreeMapView as MapView, Marker, Polyline, PROVIDER_GOOGLE } from '@/components/common';
@@ -30,6 +32,7 @@ export default function RideTrackingScreen() {
   const { currentDeviceCoords, trackedDriverCoords } = useLocationStore();
   const { user } = useAuthStore();
   const setUser = useAuthStore((state) => state.setUser);
+  const insets = useSafeAreaInsets();
 
   // Query details of active booking (polls every 4 seconds)
   const { data: activeBooking, isLoading } = useQuery<Booking>({
@@ -245,19 +248,19 @@ export default function RideTrackingScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-[#0B0C10]">
         <ActivityIndicator size="large" color="#0F62FE" />
-        <Text className="mt-2 text-sm text-gray-500 font-medium">Connecting to tracking server...</Text>
+        <Text className="mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">Connecting to tracking server...</Text>
       </View>
     );
   }
 
   if (!activeBooking) {
     return (
-      <View className="flex-1 items-center justify-center bg-white px-6 gap-3">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-[#0B0C10] px-6 gap-3">
         <Ionicons name="warning" size={40} color="#DC2626" />
-        <Text className="text-base font-bold text-textPrimary">Trip tracking unavailable</Text>
-        <Text className="text-xs text-gray-400 text-center">
+        <Text className="text-base font-bold text-textPrimary dark:text-[#F3F4F6]">Trip tracking unavailable</Text>
+        <Text className="text-xs text-gray-400 dark:text-gray-500 text-center">
           The booking has expired, been cancelled, or is no longer active.
         </Text>
         <Button label="Go to Home" onPress={() => router.replace('/(customer)')} />
@@ -266,16 +269,16 @@ export default function RideTrackingScreen() {
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-gray-50 dark:bg-[#0B0C10]">
       {/* Header */}
-      <View className="absolute top-12 left-4 right-4 z-10 flex-row items-center justify-between rounded-full bg-white/95 px-4 py-3 shadow-lg border border-gray-100">
+      <View className="absolute top-12 left-4 right-4 z-10 flex-row items-center justify-between rounded-full bg-white/95 dark:bg-[#161823]/95 px-4 py-3 shadow-lg border border-gray-100 dark:border-[#2C2E3E]">
         <Pressable
           onPress={() => router.replace('/(customer)')}
-          className="h-10 w-10 items-center justify-center rounded-full bg-gray-100 active:bg-gray-200"
+          className="h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-[#1E2030] active:bg-gray-200 dark:active:bg-[#2C2E3E]"
         >
           <Ionicons name="close" size={20} color="#111318" />
         </Pressable>
-        <Text className="text-sm font-bold text-textPrimary">Live Ride Tracking</Text>
+        <Text className="text-sm font-bold text-textPrimary dark:text-[#F3F4F6]">Live Ride Tracking</Text>
         <View className="w-10" />
       </View>
 
@@ -368,148 +371,155 @@ export default function RideTrackingScreen() {
         </MapView>
       </View>
 
-      {/* Bottom status sheet */}
+      {/* Bottom status sheet — bounded + scrollable so OTP/steps/contact/
+          buttons can never get clipped by the screen edge or system nav bar
+          on shorter devices or when several banners stack up at once. */}
       <Animated.View
         entering={SlideInDown.duration(380)}
-        className="bg-white rounded-t-3xl shadow-2xl px-6 pb-8 pt-5 border-t border-gray-100 gap-4"
+        style={{ maxHeight: '70%' }}
+        className="bg-white dark:bg-[#161823] rounded-t-3xl shadow-2xl border-t border-gray-100 dark:border-[#2C2E3E]"
       >
-        <View className="flex-row justify-between items-center border-b border-gray-100 pb-3">
-          <View>
-            <Text className="text-xs text-gray-400">Trip Code: {activeBooking.bookingNumber}</Text>
-            <Text className="text-lg font-bold text-textPrimary capitalize mt-0.5">
-              {activeBooking.status.replace('_', ' ')}
-              {liveEta !== null ? ` • ETA ${liveEta}m` : ''}
-            </Text>
-          </View>
-          <View className="bg-emerald-50 rounded-full px-3 py-1 border border-emerald-100">
-            <Text className="text-[10px] font-bold text-emerald-800 uppercase">₹{activeBooking.totalAmount}</Text>
-          </View>
-        </View>
-
-        {/* Share OTP Banner */}
-        {['pending', 'driver_accepted', 'driver_arriving', 'arrived'].includes(activeBooking.status) && user?.rideOtp && (
-          <View className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex-row justify-between items-center my-1">
-            <View className="flex-1 pr-3">
-              <Text className="text-xs font-bold text-blue-800">Share OTP to start ride</Text>
-              <Text className="text-[10px] text-blue-600/80 mt-0.5">Share this 4-digit code with your driver partner when they arrive to begin the trip.</Text>
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 24 + insets.bottom, gap: 16 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="flex-row justify-between items-center border-b border-gray-100 dark:border-[#2C2E3E] pb-3">
+            <View>
+              <Text className="text-xs text-gray-400 dark:text-gray-500">Trip Code: {activeBooking.bookingNumber}</Text>
+              <Text className="text-lg font-bold text-textPrimary dark:text-[#F3F4F6] capitalize mt-0.5">
+                {activeBooking.status.replace('_', ' ')}
+                {liveEta !== null ? ` • ETA ${liveEta}m` : ''}
+              </Text>
             </View>
-            <View className="bg-blue-600 rounded-xl px-4 py-2 shadow-sm">
-              <Text className="text-base font-bold text-white tracking-widest">{user.rideOtp}</Text>
+            <View className="bg-emerald-50 dark:bg-[#11241C] rounded-full px-3 py-1 border border-emerald-100 dark:border-[#1E3D2F]">
+              <Text className="text-[10px] font-bold text-emerald-800 dark:text-[#34D399] uppercase">₹{activeBooking.totalAmount}</Text>
             </View>
           </View>
-        )}
 
-        {/* Proximity Banner */}
-        {isDriverClose && (
-          <View className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex-row items-center gap-3 my-1">
-            <Ionicons name="notifications" size={20} color="#D97706" />
-            <View className="flex-1">
-              <Text className="text-xs font-bold text-amber-800">Driver is almost here!</Text>
-              <Text className="text-[10px] text-amber-600 mt-0.5">Your driver is within 50 meters of your pickup. Please get ready to board the vehicle.</Text>
+          {/* Share OTP Banner */}
+          {['pending', 'driver_accepted', 'driver_arriving', 'arrived'].includes(activeBooking.status) && user?.rideOtp && (
+            <View className="bg-blue-50 dark:bg-[#0F2340] border border-blue-100 dark:border-[#1E3A63] rounded-2xl p-4 flex-row justify-between items-center">
+              <View className="flex-1 pr-3">
+                <Text className="text-xs font-bold text-blue-800 dark:text-[#93C5FD]">Share OTP to start ride</Text>
+                <Text className="text-[10px] text-blue-600/80 dark:text-blue-300/80 mt-0.5">Share this 4-digit code with your driver partner when they arrive to begin the trip.</Text>
+              </View>
+              <View className="bg-blue-600 dark:bg-[#2563EB] rounded-xl px-4 py-2 shadow-sm">
+                <Text className="text-base font-bold text-white tracking-widest">{user.rideOtp}</Text>
+              </View>
             </View>
-          </View>
-        )}
+          )}
 
+          {/* Proximity Banner */}
+          {isDriverClose && (
+            <View className="bg-amber-50 dark:bg-[#2A1E10] border border-amber-100 dark:border-[#5E3E1A] rounded-2xl p-4 flex-row items-center gap-3">
+              <Ionicons name="notifications" size={20} color="#D97706" />
+              <View className="flex-1">
+                <Text className="text-xs font-bold text-amber-800 dark:text-[#FBBF24]">Driver is almost here!</Text>
+                <Text className="text-[10px] text-amber-600 dark:text-amber-300 mt-0.5">Your driver is within 50 meters of your pickup. Please get ready to board the vehicle.</Text>
+              </View>
+            </View>
+          )}
 
-        {/* Steps indicator */}
-        <View className="flex-row justify-between px-2 my-1">
-          {[
-            { key: 'pending', label: 'Requested', icon: 'send' },
-            { key: 'driver_accepted', label: 'Accepted', icon: 'checkmark-circle' },
-            { key: 'arrived', label: 'Arrived', icon: 'pin' },
-            { key: 'started', label: 'In Trip', icon: 'navigate' },
-          ].map((step) => {
-            const isActive = activeBooking.status === step.key ||
-              (step.key === 'driver_accepted' && activeBooking.status === 'driver_arriving');
+          {/* Steps indicator */}
+          <View className="flex-row justify-between px-2">
+            {[
+              { key: 'pending', label: 'Requested', icon: 'send' },
+              { key: 'driver_accepted', label: 'Accepted', icon: 'checkmark-circle' },
+              { key: 'arrived', label: 'Arrived', icon: 'pin' },
+              { key: 'started', label: 'In Trip', icon: 'navigate' },
+            ].map((step) => {
+              const isActive = activeBooking.status === step.key ||
+                (step.key === 'driver_accepted' && activeBooking.status === 'driver_arriving');
 
-            const isCompleted = (() => {
-              const order = ['pending', 'driver_notified', 'driver_accepted', 'driver_arriving', 'arrived', 'started', 'completed'];
-              const currentIdx = order.indexOf(activeBooking.status);
-              const stepIdx = order.indexOf(step.key);
-              return currentIdx > stepIdx;
-            })();
+              const isCompleted = (() => {
+                const order = ['pending', 'driver_notified', 'driver_accepted', 'driver_arriving', 'arrived', 'started', 'completed'];
+                const currentIdx = order.indexOf(activeBooking.status);
+                const stepIdx = order.indexOf(step.key);
+                return currentIdx > stepIdx;
+              })();
 
-            return (
-              <View key={step.key} className="items-center flex-1">
-                <View
-                  className={`h-9 w-9 items-center justify-center rounded-full border-2 ${
-                    isActive
-                      ? 'bg-brand border-brand text-white'
-                      : isCompleted
-                      ? 'bg-green-500 border-green-500 text-white'
-                      : 'bg-white border-gray-200 text-gray-400'
-                  }`}
-                >
-                  <Ionicons
-                    name={step.icon as any}
-                    size={16}
-                    color={isActive || isCompleted ? 'white' : '#9CA3AF'}
-                  />
+              return (
+                <View key={step.key} className="items-center flex-1">
+                  <View
+                    className={`h-9 w-9 items-center justify-center rounded-full border-2 ${
+                      isActive
+                        ? 'bg-brand border-brand'
+                        : isCompleted
+                        ? 'bg-green-500 border-green-500'
+                        : 'bg-white dark:bg-[#1E2030] border-gray-200 dark:border-[#2C2E3E]'
+                    }`}
+                  >
+                    <Ionicons
+                      name={step.icon as any}
+                      size={16}
+                      color={isActive || isCompleted ? 'white' : '#9CA3AF'}
+                    />
+                  </View>
+                  <Text className="text-[10px] mt-1 font-semibold text-gray-500 dark:text-gray-400 text-center">
+                    {step.label}
+                  </Text>
                 </View>
-                <Text className="text-[10px] mt-1 font-semibold text-gray-500 text-center">
-                  {step.label}
+              );
+            })}
+          </View>
+
+          {/* Contact driver row */}
+          <View className="flex-row items-center justify-between bg-gray-50 dark:bg-[#1E2030] p-4 rounded-2xl border border-gray-100 dark:border-[#2C2E3E]">
+            <View className="flex-row items-center gap-3">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-brand/10">
+                {activeBooking.driver?.avatar ? (
+                  <Text className="font-bold text-sm text-brand">{activeBooking.driver.avatar.slice(0, 2).toUpperCase()}</Text>
+                ) : (
+                  <Ionicons name="person-circle-outline" size={24} color="#0F62FE" />
+                )}
+              </View>
+              <View>
+                <Text className="text-sm font-bold text-textPrimary dark:text-[#F3F4F6]">
+                  {activeBooking.driver?.name || 'Driver Partner'}
+                </Text>
+                <Text className="text-xs text-gray-400 dark:text-gray-500 capitalize">Payment mode: {activeBooking.paymentMethod}</Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => {
+                const phone = activeBooking.driver?.phone || '+919999999999';
+                Linking.openURL(`tel:${phone}`);
+              }}
+              className="h-10 w-10 items-center justify-center rounded-xl bg-brand/10 active:bg-brand/20"
+            >
+              <Ionicons name="call" size={18} color="#0F62FE" />
+            </Pressable>
+          </View>
+
+          {/* Payment due — trip has ended but payment isn't settled yet (if it
+              were, the redirect effect above would already have navigated away). */}
+          {activeBooking.status === 'completed' && (
+            <View className="bg-amber-50 dark:bg-[#2A1E10] border border-amber-100 dark:border-[#5E3E1A] rounded-2xl p-4 gap-3">
+              <View>
+                <Text className="text-xs font-bold text-amber-800 dark:text-[#FBBF24]">Payment due</Text>
+                <Text className="text-[10px] text-amber-700 dark:text-amber-300 mt-0.5">
+                  Pay ₹{formatMoney(activeBooking.totalAmount)} online now, or hand cash to your driver — you'll be
+                  taken to rate your trip once payment is confirmed.
                 </Text>
               </View>
-            );
-          })}
-        </View>
-
-        {/* Contact driver row */}
-        <View className="flex-row items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100">
-          <View className="flex-row items-center gap-3">
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-brand/10">
-              {activeBooking.driver?.avatar ? (
-                <Text className="font-bold text-sm text-brand">{activeBooking.driver.avatar.slice(0, 2).toUpperCase()}</Text>
-              ) : (
-                <Ionicons name="person-circle-outline" size={24} color="#0F62FE" />
-              )}
+              <Button label="Pay Online (Card / UPI)" onPress={handlePayOnline} isLoading={isPayingOnline} />
             </View>
-            <View>
-              <Text className="text-sm font-bold text-textPrimary">
-                {activeBooking.driver?.name || 'Driver Partner'}
-              </Text>
-              <Text className="text-xs text-gray-400 capitalize">Payment mode: {activeBooking.paymentMethod}</Text>
-            </View>
-          </View>
-          <Pressable
-            onPress={() => {
-              const phone = activeBooking.driver?.phone || '+919999999999';
-              Linking.openURL(`tel:${phone}`);
-            }}
-            className="h-10 w-10 items-center justify-center rounded-xl bg-brand/10 active:bg-brand/20"
-          >
-            <Ionicons name="call" size={18} color="#0F62FE" />
-          </Pressable>
-        </View>
+          )}
 
-        {/* Payment due — trip has ended but payment isn't settled yet (if it
-            were, the redirect effect above would already have navigated away). */}
-        {activeBooking.status === 'completed' && (
-          <View className="bg-amber-50 border border-amber-100 rounded-2xl p-4 gap-3">
-            <View>
-              <Text className="text-xs font-bold text-amber-800">Payment due</Text>
-              <Text className="text-[10px] text-amber-700 mt-0.5">
-                Pay ₹{formatMoney(activeBooking.totalAmount)} online now, or hand cash to your driver — you'll be
-                taken to rate your trip once payment is confirmed.
-              </Text>
-            </View>
-            <Button label="Pay Online (Card / UPI)" onPress={handlePayOnline} isLoading={isPayingOnline} />
-          </View>
-        )}
-
-        {/* Cancel Button */}
-        {['pending', 'driver_notified', 'driver_accepted', 'driver_arriving', 'arrived'].includes(
-          activeBooking.status
-        ) ? (
-          <Button
-            label="Cancel Ride Request"
-            variant="secondary"
-            onPress={handleCancelBooking}
-            isLoading={cancelBookingMutation.isPending}
-          />
-        ) : activeBooking.status === 'cancelled' ? (
-          <Button label="Find Another Driver" onPress={goToNearbyDrivers} />
-        ) : null}
+          {/* Cancel Button */}
+          {['pending', 'driver_notified', 'driver_accepted', 'driver_arriving', 'arrived'].includes(
+            activeBooking.status
+          ) ? (
+            <Button
+              label="Cancel Ride Request"
+              variant="secondary"
+              onPress={handleCancelBooking}
+              isLoading={cancelBookingMutation.isPending}
+            />
+          ) : activeBooking.status === 'cancelled' ? (
+            <Button label="Find Another Driver" onPress={goToNearbyDrivers} />
+          ) : null}
+        </ScrollView>
       </Animated.View>
     </View>
   );

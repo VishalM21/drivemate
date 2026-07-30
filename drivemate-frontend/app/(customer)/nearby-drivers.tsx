@@ -40,6 +40,8 @@ export default function NearbyDriversScreen() {
     radiusKm: radius,
     serviceType: serviceType || 'local',
     enabled: !!pickupCoords,
+    dropLatitude: dropLatitude ? parseFloat(dropLatitude) : null,
+    dropLongitude: dropLongitude ? parseFloat(dropLongitude) : null,
   });
 
   const nearbyDrivers = nearbyDriversData?.drivers ?? [];
@@ -168,7 +170,7 @@ export default function NearbyDriversScreen() {
               key={driver.id}
               coordinate={driver.location}
               title={driver.name}
-              description={`₹${driver.pricePerTrip}/trip`}
+              description={driver.tripFare != null ? `₹${driver.tripFare}` : undefined}
             >
               <View className="h-7 w-7 items-center justify-center rounded-full bg-emerald-500 border-2 border-white shadow">
                 <Ionicons name="car-sport" size={14} color="white" />
@@ -266,7 +268,16 @@ export default function NearbyDriversScreen() {
                     </View>
                   </View>
                   <View className="items-end">
-                    <Text className="font-extrabold text-brand text-base">₹{item.pricePerTrip}</Text>
+                    <Text className="font-extrabold text-brand text-base">
+                      {item.tripFare != null ? `₹${item.tripFare}` : '—'}
+                    </Text>
+                    {item.surgeMultiplier != null && item.surgeMultiplier > 1 ? (
+                      <View className="bg-amber-100 dark:bg-[#3A2A10] rounded-full px-2 py-0.5 mt-0.5">
+                        <Text className="text-[9px] font-bold text-amber-700 dark:text-amber-400">
+                          {item.surgeMultiplier}x demand
+                        </Text>
+                      </View>
+                    ) : null}
                     <Text className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">ETA: {item.etaMinutes} mins</Text>
                   </View>
                 </Pressable>

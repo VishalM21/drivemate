@@ -297,7 +297,6 @@ export default function DriverDashboard() {
 function FirstTimeProfileForm({ onSaved }: { onSaved: (profile: DriverProfile) => void }) {
   const [license, setLicense] = useState('');
   const [experience, setExperience] = useState('');
-  const [price, setPrice] = useState('');
   const [email, setEmail] = useState('');
   const [languageList, setLanguageList] = useState('Hindi, English');
 
@@ -313,17 +312,11 @@ function FirstTimeProfileForm({ onSaved }: { onSaved: (profile: DriverProfile) =
       showAlert('Error', 'Enter a valid number of years of experience.');
       return;
     }
-    const basePrice = parseFloat(price);
-    if (isNaN(basePrice) || basePrice <= 0) {
-      showAlert('Error', 'Enter a valid base trip pricing.');
-      return;
-    }
 
     try {
       const data = await updateProfile({
         licenseNumber: license.trim().toUpperCase(),
         experienceYears: expYears,
-        pricePerTrip: basePrice,
         email: email.trim() || undefined,
         languages: languageList.split(',').map((l) => l.trim()).filter(Boolean),
         serviceLocal: true,
@@ -356,25 +349,18 @@ function FirstTimeProfileForm({ onSaved }: { onSaved: (profile: DriverProfile) =
             onChangeText={setLicense}
           />
 
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              <TextField
-                label="Experience (Years)"
-                placeholder="e.g. 5"
-                keyboardType="number-pad"
-                value={experience}
-                onChangeText={setExperience}
-              />
-            </View>
-            <View className="flex-1">
-              <TextField
-                label="Price Per Trip (₹)"
-                placeholder="e.g. 400"
-                keyboardType="decimal-pad"
-                value={price}
-                onChangeText={setPrice}
-              />
-            </View>
+          <TextField
+            label="Experience (Years)"
+            placeholder="e.g. 5"
+            keyboardType="number-pad"
+            value={experience}
+            onChangeText={setExperience}
+          />
+
+          <View className="bg-blue-50 dark:bg-[#10233D] border border-blue-100 dark:border-[#1E3A5F] rounded-2xl p-3">
+            <Text className="text-xs text-blue-800 dark:text-blue-300">
+              Trip pricing is set automatically based on distance and real-time demand — you don't set your own rate.
+            </Text>
           </View>
 
           <TextField

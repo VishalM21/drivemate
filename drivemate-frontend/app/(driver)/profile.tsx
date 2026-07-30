@@ -20,7 +20,6 @@ export default function DriverProfileScreen() {
   // Form states initialized with existing profile values
   const [license, setLicense] = useState(driverProfile?.licenseNumber ?? '');
   const [experience, setExperience] = useState(String(driverProfile?.experienceYears ?? ''));
-  const [price, setPrice] = useState(String(driverProfile?.pricePerTrip ?? ''));
   const [email, setEmail] = useState(driverProfile?.email ?? '');
   const [languages, setLanguages] = useState(driverProfile?.languages.join(', ') ?? 'Hindi, English');
 
@@ -44,17 +43,10 @@ export default function DriverProfileScreen() {
       showAlert('Error', 'Enter a valid number of years of experience.');
       return;
     }
-    const basePrice = parseFloat(price);
-    if (isNaN(basePrice) || basePrice <= 0) {
-      showAlert('Error', 'Enter a valid base trip pricing.');
-      return;
-    }
-
     try {
       await updateProfile({
         licenseNumber: license.trim().toUpperCase(),
         experienceYears: expYears,
-        pricePerTrip: basePrice,
         email: email.trim() || undefined,
         languages: languages.split(',').map((l) => l.trim()).filter(Boolean),
         serviceLocal,
@@ -94,26 +86,13 @@ export default function DriverProfileScreen() {
             onChangeText={setLicense}
           />
 
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              <TextField
-                label="Experience (Years)"
-                placeholder="e.g. 5"
-                keyboardType="number-pad"
-                value={experience}
-                onChangeText={setExperience}
-              />
-            </View>
-            <View className="flex-1">
-              <TextField
-                label="Price Per Trip (₹)"
-                placeholder="e.g. 400"
-                keyboardType="decimal-pad"
-                value={price}
-                onChangeText={setPrice}
-              />
-            </View>
-          </View>
+          <TextField
+            label="Experience (Years)"
+            placeholder="e.g. 5"
+            keyboardType="number-pad"
+            value={experience}
+            onChangeText={setExperience}
+          />
 
           <TextField
             label="Email Address"

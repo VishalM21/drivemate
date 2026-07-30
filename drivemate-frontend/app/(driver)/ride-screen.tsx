@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { showAlert } from '@/utils/alert';
 import Animated, { SlideInDown } from 'react-native-reanimated';
 import { Button, ScreenContainer, AnimatedMarker, FreeMapView as MapView, Marker, Polyline, PROVIDER_GOOGLE } from '@/components/common';
@@ -31,6 +32,7 @@ export default function DriverRideScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const { currentDeviceCoords } = useLocationStore();
   const [enteredOtp, setEnteredOtp] = useState('');
+  const insets = useSafeAreaInsets();
 
   // Query details of active booking (polls every 4 seconds)
   const { data: booking, isLoading } = useQuery<Booking>({
@@ -111,19 +113,19 @@ export default function DriverRideScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-[#0B0C10]">
         <ActivityIndicator size="large" color="#12805C" />
-        <Text className="mt-2 text-sm text-gray-500">Loading trip tracking map...</Text>
+        <Text className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading trip tracking map...</Text>
       </View>
     );
   }
 
   if (!booking) {
     return (
-      <View className="flex-1 items-center justify-center bg-white px-6 gap-3">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-[#0B0C10] px-6 gap-3">
         <Ionicons name="warning" size={40} color="#DC2626" />
-        <Text className="text-base font-bold text-textPrimary">Trip Unavailable</Text>
-        <Text className="text-xs text-gray-400">
+        <Text className="text-base font-bold text-textPrimary dark:text-[#F3F4F6]">Trip Unavailable</Text>
+        <Text className="text-xs text-gray-400 dark:text-gray-500">
           This booking has been cancelled, completed, or is no longer assigned to you.
         </Text>
         <Button label="Go to Dashboard" onPress={() => router.replace('/(driver)')} />
@@ -147,16 +149,16 @@ export default function DriverRideScreen() {
   })();
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-gray-50 dark:bg-[#0B0C10]">
       {/* Header */}
-      <View className="absolute top-12 left-4 right-4 z-10 flex-row items-center justify-between rounded-full bg-white/95 px-4 py-3 shadow-lg border border-gray-100">
+      <View className="absolute top-12 left-4 right-4 z-10 flex-row items-center justify-between rounded-full bg-white/95 dark:bg-[#161823]/95 px-4 py-3 shadow-lg border border-gray-100 dark:border-[#2C2E3E]">
         <Pressable
           onPress={() => router.replace('/(driver)')}
-          className="h-10 w-10 items-center justify-center rounded-full bg-gray-100 active:bg-gray-200"
+          className="h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-[#1E2030] active:bg-gray-200 dark:active:bg-[#2C2E3E]"
         >
           <Ionicons name="home" size={18} color="#111318" />
         </Pressable>
-        <Text className="text-sm font-bold text-textPrimary capitalize">
+        <Text className="text-sm font-bold text-textPrimary dark:text-[#F3F4F6] capitalize">
           Trip: {booking.status.replace('_', ' ')}
           {liveEta !== null ? ` (ETA: ${liveEta}m)` : ''}
         </Text>
@@ -177,7 +179,7 @@ export default function DriverRideScreen() {
             `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`
           );
         }}
-        className="absolute top-28 right-4 z-10 h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg border border-gray-100 active:bg-gray-50"
+        className="absolute top-28 right-4 z-10 h-12 w-12 items-center justify-center rounded-full bg-white dark:bg-[#161823] shadow-lg border border-gray-100 dark:border-[#2C2E3E] active:bg-gray-50 dark:active:bg-[#1E2030]"
       >
         <Ionicons name="navigate" size={22} color="#12805C" />
       </Pressable>
@@ -260,16 +262,17 @@ export default function DriverRideScreen() {
       {/* Bottom Sheet Control Panel */}
       <Animated.View
         entering={SlideInDown.duration(380)}
-        className="bg-white rounded-t-3xl shadow-2xl px-6 pb-8 pt-5 border-t border-gray-100 gap-4"
+        style={{ paddingBottom: 24 + insets.bottom }}
+        className="bg-white dark:bg-[#161823] rounded-t-3xl shadow-2xl px-6 pt-5 border-t border-gray-100 dark:border-[#2C2E3E] gap-4"
       >
-        <View className="flex-row justify-between items-center border-b border-gray-100 pb-3">
+        <View className="flex-row justify-between items-center border-b border-gray-100 dark:border-[#2C2E3E] pb-3">
           <View>
-            <Text className="text-xs text-gray-400">Booking: {booking.bookingNumber}</Text>
+            <Text className="text-xs text-gray-400 dark:text-gray-500">Booking: {booking.bookingNumber}</Text>
             <Text className="text-[10px] font-bold text-driver uppercase tracking-widest mt-0.5">
               Service: {booking.serviceType} Mode
             </Text>
           </View>
-          <View className="bg-emerald-50 rounded-full px-3 py-1 border border-emerald-100">
+          <View className="bg-emerald-50 dark:bg-[#11241C] rounded-full px-3 py-1 border border-emerald-100 dark:border-[#1E3D2F]">
             <Text className="text-xs font-bold text-driver uppercase">Payout: ₹{formatMoney(booking.driverFee)}</Text>
           </View>
         </View>
@@ -278,32 +281,32 @@ export default function DriverRideScreen() {
         <View className="gap-2.5">
           <View className="flex-row items-center gap-2">
             <View className="h-2 w-2 rounded-full bg-blue-500" />
-            <Text className="text-xs text-textPrimary font-semibold flex-1" numberOfLines={1}>
+            <Text className="text-xs text-textPrimary dark:text-[#F3F4F6] font-semibold flex-1" numberOfLines={1}>
               From: {booking.pickupAddress || 'Customer Pickup Address'}
             </Text>
           </View>
           <View className="flex-row items-center gap-2">
             <View className="h-2 w-2 rounded-full bg-red-500" />
-            <Text className="text-xs text-textPrimary font-semibold flex-1" numberOfLines={1}>
+            <Text className="text-xs text-textPrimary dark:text-[#F3F4F6] font-semibold flex-1" numberOfLines={1}>
               To: {booking.dropAddress || 'Destination Drop Address'}
             </Text>
           </View>
         </View>
 
         {/* Contact Customer Panel */}
-        <View className="flex-row items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100">
+        <View className="flex-row items-center justify-between bg-gray-50 dark:bg-[#1E2030] p-4 rounded-2xl border border-gray-100 dark:border-[#2C2E3E]">
           <View className="flex-row items-center gap-3">
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-emerald-50">
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-emerald-50 dark:bg-[#11241C]">
               <Ionicons name="person" size={18} color="#12805C" />
             </View>
             <View>
-              <Text className="text-sm font-bold text-textPrimary">Customer Owner</Text>
-              <Text className="text-xs text-gray-400">Total COD Collected: ₹{formatMoney(booking.totalAmount)}</Text>
+              <Text className="text-sm font-bold text-textPrimary dark:text-[#F3F4F6]">Customer Owner</Text>
+              <Text className="text-xs text-gray-400 dark:text-gray-500">Total COD Collected: ₹{formatMoney(booking.totalAmount)}</Text>
             </View>
           </View>
           <Pressable
             onPress={() => Linking.openURL('tel:+919999999999')}
-            className="h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 active:bg-emerald-100"
+            className="h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-[#11241C] active:bg-emerald-100 dark:active:bg-[#1E3D2F]"
           >
             <Ionicons name="call" size={18} color="#12805C" />
           </Pressable>
@@ -318,11 +321,11 @@ export default function DriverRideScreen() {
           />
         ) : booking.status === 'arrived' ? (
           <View className="gap-3">
-            <View className="bg-gray-50 border border-gray-100 rounded-2xl p-4 gap-2">
-              <Text className="text-xs font-bold text-textPrimary">Enter Customer's Ride OTP</Text>
-              <Text className="text-[10px] text-gray-400">Ask the customer for the 4-digit code shown on their tracking screen.</Text>
+            <View className="bg-gray-50 dark:bg-[#1E2030] border border-gray-100 dark:border-[#2C2E3E] rounded-2xl p-4 gap-2">
+              <Text className="text-xs font-bold text-textPrimary dark:text-[#F3F4F6]">Enter Customer's Ride OTP</Text>
+              <Text className="text-[10px] text-gray-400 dark:text-gray-500">Ask the customer for the 4-digit code shown on their tracking screen.</Text>
               <TextInput
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-center text-xl font-bold tracking-widest text-textPrimary mt-1"
+                className="bg-white dark:bg-[#161823] border border-gray-200 dark:border-[#2C2E3E] rounded-xl px-4 py-3 text-center text-xl font-bold tracking-widest text-textPrimary dark:text-[#F3F4F6] mt-1"
                 placeholder="0 0 0 0"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="number-pad"

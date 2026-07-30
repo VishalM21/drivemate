@@ -7,7 +7,6 @@ export interface DriverProfile {
   totalTrips: number;
   experienceYears: number;
   languages: string[];
-  pricePerTrip: number;
   isVerified: boolean;
   isAvailable: boolean;
   serviceLocal: boolean;
@@ -29,7 +28,6 @@ export interface NearbyDriver {
   totalTrips: number;
   experience: string;
   languages: string[];
-  pricePerTrip: number;
   isVerified: boolean;
   isAvailable: boolean;
   location: Coordinates;
@@ -40,6 +38,11 @@ export interface NearbyDriver {
   serviceAirport: boolean;
   serviceMonthly: boolean;
   serviceNight: boolean;
+  /** Only present once a drop point was given — dynamically priced quote,
+   * same for every driver in the list (surge is area-based, not per-driver). */
+  tripDistanceKm?: number;
+  tripFare?: number;
+  surgeMultiplier?: number;
 }
 
 export interface NearbyDriversResponse {
@@ -51,10 +54,13 @@ export interface NearbyDriversQuery {
   longitude: number;
   radiusKm?: number;
   serviceType?: string;
+  /** Needed for the backend to compute tripDistanceKm/tripFare/surgeMultiplier
+   * — omit and every driver comes back with no fare quote at all. */
+  dropLatitude?: number;
+  dropLongitude?: number;
 }
 
 export interface UpsertDriverProfileRequest {
-  pricePerTrip?: number;
   experienceYears?: number;
   languages?: string[];
   licenseNumber?: string;

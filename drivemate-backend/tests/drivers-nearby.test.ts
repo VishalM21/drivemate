@@ -39,13 +39,25 @@ Deno.test("nearby: service type filter and distance ordering, camelCase shape", 
   assertEquals(airport.drivers.map((d: any) => d.name), ["Near Airport", "Far Airport"]);
 
   const d = airport.drivers[0];
-  assert(typeof d.pricePerTrip === "number");
   assert(typeof d.distanceKm === "number");
   assert(typeof d.etaMinutes === "number" && d.etaMinutes >= 1);
   assert(d.location && typeof d.location.latitude === "number");
   assertEquals(d.experience, "3 years");
   assertEquals(d.avatar, "NA"); // "Near Airport" initials
   assert(d.isVerified && d.isAvailable);
+});
+
+Deno.test("nearby: with a drop point, quotes a dynamically priced tripFare + surgeMultiplier", async () => {
+  const { db, mk } = setup();
+  mk("Quoted Driver", {}, { latitude: 26.455, longitude: 80.335 });
+
+  const res = await nearbyDrivers(db, q({ dropLatitude: "26.47", dropLongitude: "80.35" }));
+  const d = res.drivers[0] as any;
+  assert(typeof d.tripDistanceKm === "number" && d.tripDistanceKm > 0);
+  assert(typeof d.tripFare === "number" && d.tripFare > 0);
+  assert(typeof d.surgeMultiplier === "number" && d.surgeMultiplier >= 1);
+  // no driver-set price anywhere in the response anymore
+  assertEquals("pricePerTrip" in d, false);
 });
 
 Deno.test("nearby: rejects missing coordinates", async () => {

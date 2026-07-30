@@ -73,7 +73,8 @@ export async function createSession(
         const driverProfile = await deps.db.createDriver({
           user_id: user.id,
           license_number: dlNumber ?? "DL-PENDING",
-          price_per_trip: 100, // default price
+          // No price_per_trip — dynamic pricing prices every trip, drivers
+          // don't set their own rate (column defaults to 0, unused).
           is_verified: true, // auto-verified for onboarding ease
           is_available: true,
           service_local: true,

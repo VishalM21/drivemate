@@ -1,7 +1,8 @@
-import React, { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
+import React, { forwardRef, useImperativeHandle, useMemo, useRef, useEffect } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import NativeMapView, { Marker as NativeMarker, Polyline as NativePolyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import type { WebView } from 'react-native-webview';
+import { useColorScheme } from 'nativewind';
 import { LEAFLET_CSS, LEAFLET_JS } from './LeafletAssets';
 
 export { PROVIDER_GOOGLE };
@@ -60,7 +61,7 @@ const parseChildren = (children: React.ReactNode) => {
 };
 
 // HTML content for Leaflet Map using Cloudflare CDN
-const LEAFLET_HTML = `
+const LEAFLET_HTML = (isDark: boolean) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -74,7 +75,7 @@ const LEAFLET_HTML = `
   </script>
   <style>
     body { padding: 0; margin: 0; }
-    html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; background-color: #FAFAFC; }
+    html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; background-color: ${isDark ? '#0B0C10' : '#FAFAFC'}; }
     
     /* Custom style for markers */
     .pickup-icon {
@@ -136,9 +137,11 @@ const LEAFLET_HTML = `
       }
     };
 
-    var map = L.map('map', { zoomControl: false }).setView([26.4499, 80.3319], 13);
-    
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([26.4499, 80.3319], 13);
+
+    L.tileLayer('${isDark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'}', {
       maxZoom: 20,
       subdomains: 'abcd',
       attribution: '© OpenStreetMap, © CARTO'
@@ -335,7 +338,10 @@ interface FreeMapViewProps {
 
 export const FreeMapView = forwardRef((props: FreeMapViewProps, ref) => {
   const { children, initialRegion, region, style, className, provider, ...rest } = props;
-  
+
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   const iosRef = useRef<NativeMapView | null>(null);
   const androidRef = useRef<WebView | null>(null);
   
@@ -415,6 +421,7 @@ export const FreeMapView = forwardRef((props: FreeMapViewProps, ref) => {
         onRegionChangeComplete={(r) => props.onCenterChanged?.(r.latitude, r.longitude)}
         {...rest}
         provider={undefined} // Force Apple Maps on iOS to avoid Google Maps billing requirements
+        userInterfaceStyle={isDark ? 'dark' : 'light'}
       >
         {children}
       </NativeMapView>
@@ -424,13 +431,25 @@ export const FreeMapView = forwardRef((props: FreeMapViewProps, ref) => {
   // Android: WebView Leaflet Map
   const { WebView } = require('react-native-webview');
 
+  // Stable references across re-renders (location polling etc. re-renders
+  // the parent constantly) — a new `source`/`style` object identity every
+  // render was making the native WebView manager re-run loadSource on
+  // Fabric far more often than intended, which crashed with a
+  // NullPointerException in RNCWebViewManagerImpl. Only actually changes
+  // when the theme changes.
+  const webviewSource = useMemo(() => ({ html: LEAFLET_HTML(isDark) }), [isDark]);
+  const webviewStyle = useMemo(
+    () => [styles.webview, { backgroundColor: isDark ? '#0B0C10' : '#FAFAFC' }],
+    [isDark],
+  );
+
   return (
     <View style={[styles.container, style]} className={className}>
       <WebView
         ref={androidRef}
         originWhitelist={['*']}
-        source={{ html: LEAFLET_HTML }}
-        style={styles.webview}
+        source={webviewSource}
+        style={webviewStyle}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         mixedContentMode="always"

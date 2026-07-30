@@ -17,10 +17,10 @@ import { fetchCurrentUser } from '@/services/common/authService';
 import type { ServiceType, Vehicle } from '@/types';
 
 export default function BookingScreen() {
-  const { driverId, driverName, pricePerTrip, dropAddress, dropLatitude, dropLongitude, serviceType } = useLocalSearchParams<{
+  const { driverId, driverName, tripFare, dropAddress, dropLatitude, dropLongitude, serviceType } = useLocalSearchParams<{
     driverId: string;
     driverName: string;
-    pricePerTrip: string;
+    tripFare: string;
     dropAddress: string;
     dropLatitude: string;
     dropLongitude: string;
@@ -63,12 +63,10 @@ export default function BookingScreen() {
 
   const { createBooking, isCreatingBooking } = useCustomerBooking();
 
-  // Fare calculations matching backend services
-  const baseTripFare = parseFloat(pricePerTrip || '0');
-  const platformFee = 50; // flat rate platform convenience fee
-  const taxRate = 0.18; // 18% GST tax
-  const taxAmount = Math.round((baseTripFare + platformFee) * taxRate * 100) / 100;
-  const totalAmount = baseTripFare + platformFee + taxAmount;
+  // Quoted estimate from the driver list (dynamic pricing — distance +
+  // real-time demand). The authoritative fare/breakdown comes back from
+  // createBooking() below; this is just what to show before confirming.
+  const estimatedFare = tripFare ? parseFloat(tripFare) : null;
 
   const handleConfirmBooking = async () => {
     if (!currentDeviceCoords) {
@@ -195,32 +193,22 @@ export default function BookingScreen() {
             />
           </View>
 
-          {/* Payment Fare Breakdown Card */}
-          <Text className="text-sm font-bold text-textSecondary dark:text-gray-400 mt-2">Fare Details (Cash on Delivery)</Text>
-          <View className="bg-white dark:bg-[#161823] border border-gray-100 dark:border-[#2C2E3E] rounded-2xl p-4 gap-2 shadow-sm">
-            <View className="flex-row justify-between">
-              <Text className="text-xs text-gray-500 dark:text-gray-400">Trip Base Fare</Text>
-              <Text className="text-xs font-semibold text-textPrimary dark:text-[#F3F4F6]">₹{baseTripFare}</Text>
-            </View>
-            <View className="flex-row justify-between">
-              <Text className="text-xs text-gray-500 dark:text-gray-400">Convenience Platform Fee</Text>
-              <Text className="text-xs font-semibold text-textPrimary dark:text-[#F3F4F6]">₹{platformFee}</Text>
-            </View>
-            <View className="flex-row justify-between">
-              <Text className="text-xs text-gray-500 dark:text-gray-400">GST Tax & levies (18%)</Text>
-              <Text className="text-xs font-semibold text-textPrimary dark:text-[#F3F4F6]">₹{taxAmount}</Text>
-            </View>
-            <View className="flex-row justify-between border-t border-gray-100 dark:border-[#2C2E3E] pt-2 mt-1">
-              <Text className="text-sm font-bold text-textPrimary dark:text-[#F3F4F6]">Total Cash Due</Text>
-              <Text className="text-sm font-extrabold text-brand">₹{totalAmount}</Text>
-            </View>
+          {/* Fare estimate — dynamically priced (distance + real-time demand),
+              not a driver-set rate. Final amount is confirmed once the
+              booking is created (shown on the tracking screen). */}
+          <Text className="text-sm font-bold text-textSecondary dark:text-gray-400 mt-2">Estimated Fare (Cash on Delivery)</Text>
+          <View className="bg-white dark:bg-[#161823] border border-gray-100 dark:border-[#2C2E3E] rounded-2xl p-4 flex-row justify-between items-center shadow-sm">
+            <Text className="text-xs text-gray-500 dark:text-gray-400">Includes platform fee & GST</Text>
+            <Text className="text-lg font-extrabold text-brand">
+              {estimatedFare != null ? `₹${estimatedFare}` : '—'}
+            </Text>
           </View>
         </View>
 
         {/* Action Button */}
         <View className="pt-6">
           <Button
-            label={`Confirm Booking (₹${totalAmount})`}
+            label={estimatedFare != null ? `Confirm Booking (₹${estimatedFare})` : 'Confirm Booking'}
             onPress={handleConfirmBooking}
             isLoading={isCreatingBooking}
           />

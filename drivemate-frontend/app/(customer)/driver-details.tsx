@@ -42,16 +42,22 @@ export default function DriverDetailsScreen() {
   const searchLongitude = pickupLongitude ? parseFloat(pickupLongitude) : currentDeviceCoords?.longitude;
   const searchRadiusKm = radiusKm ? parseFloat(radiusKm) : 10;
 
+  const dropLatNum = dropLatitude ? parseFloat(dropLatitude) : undefined;
+  const dropLngNum = dropLongitude ? parseFloat(dropLongitude) : undefined;
+
   // Query nearby drivers list again (using the exact same pickup point + radius
-  // the customer searched with) to pull this specific driver's fresh profile details.
+  // the customer searched with) to pull this specific driver's fresh profile
+  // details — dropLat/dropLng included so the backend also quotes tripFare.
   const { data: nearbyDriversData, isLoading: isLoadingDriver } = useQuery({
-    queryKey: ['nearbyDrivers', searchLatitude, searchLongitude, serviceType, searchRadiusKm],
+    queryKey: ['nearbyDrivers', searchLatitude, searchLongitude, serviceType, searchRadiusKm, dropLatNum, dropLngNum],
     queryFn: () =>
       fetchNearbyDrivers({
         latitude: searchLatitude ?? 26.4499,
         longitude: searchLongitude ?? 80.3319,
         radiusKm: searchRadiusKm,
         serviceType: serviceType || 'local',
+        dropLatitude: dropLatNum,
+        dropLongitude: dropLngNum,
       }),
     enabled: searchLatitude != null && searchLongitude != null && !!driverId,
   });
@@ -74,7 +80,7 @@ export default function DriverDetailsScreen() {
       params: {
         driverId: driver.id,
         driverName: driver.name,
-        pricePerTrip: driver.pricePerTrip,
+        tripFare: driver.tripFare != null ? String(driver.tripFare) : '',
         dropAddress,
         dropLatitude,
         dropLongitude,
@@ -150,8 +156,15 @@ export default function DriverDetailsScreen() {
           {/* Pricing Box */}
           <View className="flex-row justify-between items-center bg-gray-50 dark:bg-[#1E2030] rounded-2xl p-4 mt-2">
             <View>
-              <Text className="text-xs text-gray-400 dark:text-gray-500">Driver Fee Rate</Text>
-              <Text className="text-lg font-bold text-textPrimary dark:text-[#F3F4F6]">₹{driver.pricePerTrip} / trip</Text>
+              <Text className="text-xs text-gray-400 dark:text-gray-500">Estimated Fare</Text>
+              <Text className="text-lg font-bold text-textPrimary dark:text-[#F3F4F6]">
+                {driver.tripFare != null ? `₹${driver.tripFare}` : 'Calculating…'}
+              </Text>
+              {driver.surgeMultiplier != null && driver.surgeMultiplier > 1 ? (
+                <Text className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+                  {driver.surgeMultiplier}x demand pricing
+                </Text>
+              ) : null}
             </View>
             <View className="items-end">
               <Text className="text-xs text-gray-400 dark:text-gray-500">Estimated Pickup ETA</Text>

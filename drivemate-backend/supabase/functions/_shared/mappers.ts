@@ -32,6 +32,7 @@ export function bookingToApi(b: BookingRow) {
     status: b.status,
     driverFee: Number(b.driver_fee), platformFee: Number(b.platform_fee),
     taxAmount: Number(b.tax_amount), totalAmount: Number(b.total_amount),
+    surgeMultiplier: Number(b.surge_multiplier),
     paymentStatus: b.payment_status, paymentMethod: b.payment_method,
     cancellationReason: b.cancellation_reason, createdAt: b.created_at, updatedAt: b.updated_at,
   };
@@ -56,7 +57,7 @@ export function reviewToApi(r: ReviewRow) {
 export function driverToApi(d: DriverRow) {
   return {
     id: d.id, userId: d.user_id, rating: Number(d.rating), totalTrips: d.total_trips,
-    experienceYears: d.experience_years, languages: d.languages, pricePerTrip: Number(d.price_per_trip),
+    experienceYears: d.experience_years, languages: d.languages,
     isVerified: d.is_verified, isAvailable: d.is_available,
     serviceLocal: d.service_local, serviceOutstation: d.service_outstation,
     serviceAirport: d.service_airport, serviceMonthly: d.service_monthly, serviceNight: d.service_night,
@@ -78,7 +79,6 @@ export function nearbyDriverToApi(r: NearbyDriverRow) {
     totalTrips: r.total_trips,
     experience: `${r.experience_years} years`,
     languages: r.languages,
-    pricePerTrip: Number(r.price_per_trip),
     isVerified: r.is_verified,
     isAvailable: r.is_available,
     location: { latitude: r.latitude, longitude: r.longitude },

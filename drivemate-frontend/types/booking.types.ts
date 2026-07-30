@@ -38,6 +38,7 @@ export interface Booking {
   platformFee: number;
   taxAmount: number;
   totalAmount: number;
+  surgeMultiplier: number;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
   cancellationReason: string | null;

@@ -119,6 +119,14 @@ export function createSupabaseDb(): Db {
       return data ?? [];
     },
 
+    async countPendingBookingsNear(lat, lng, radiusKm) {
+      const { data, error } = await sb.rpc("nearby_pending_bookings_count", {
+        p_lat: lat, p_lng: lng, p_radius_km: radiusKm,
+      });
+      if (error) throw serverError(error.message);
+      return data ?? 0;
+    },
+
     async insertBookingEvent(e) {
       await sb.from("booking_events").insert(e);
     },
