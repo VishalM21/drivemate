@@ -23,3 +23,6 @@ node_modules/
 
 # Local-only Claude settings (machine-specific permission allowlist)
 .claude/settings.local.json
+
+# Dev script logs (run-mumu.sh)
+.devlogs/
